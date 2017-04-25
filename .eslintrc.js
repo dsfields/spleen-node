@@ -6,6 +6,7 @@ module.exports = {
     "curly": 0,
     "func-names": 0,
     "max-len": ["error", 80],
+    "no-case-declarations": 0,
     "no-continue": 0,
     "no-param-reassign": 0,
     "no-plusplus": 0,
