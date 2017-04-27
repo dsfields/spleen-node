@@ -2,6 +2,7 @@
 
 const assert = require('chai').assert;
 
+const errors = require('../../lib/errors');
 const Tokenizer = require('../../lib/tokenizer');
 const TokenType = require('../../lib/token-type');
 
@@ -55,15 +56,17 @@ describe('Tokenizer', () => {
     });
 
     it('should error if string literal not terminated', () => {
-      const tokenizer = new Tokenizer('"asdf');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('"asdf');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should ignore " when escaping', () => {
-      const tokenizer = new Tokenizer('\\"asdf"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('\\"asdf"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should ignore " when escaping in string', () => {
@@ -74,9 +77,10 @@ describe('Tokenizer', () => {
     });
 
     it('should ignore " when escaping string terminator', () => {
-      const tokenizer = new Tokenizer('"asdf\\"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('"asdf\\"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should include white space in string literals', () => {
@@ -125,9 +129,10 @@ describe('Tokenizer', () => {
     });
 
     it('should error if / encountered with non-string or non-target', () => {
-      const tokenizer = new Tokenizer('eq/');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('eq/');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should ignore ( if escaping', () => {
@@ -276,9 +281,10 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing true terminated by "', () => {
-      const tokenizer = new Tokenizer('true"asdf"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('true"asdf"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse true terminated by (', () => {
@@ -373,11 +379,12 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream true terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo eq true" "');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq true" "');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream true terminated by (', () => {
@@ -519,9 +526,10 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing false terminated by "', () => {
-      const tokenizer = new Tokenizer('false"asdf"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('false"asdf"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse false terminated by (', () => {
@@ -616,11 +624,12 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream false terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo eq false" "');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq false" "');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream false terminated by (', () => {
@@ -760,15 +769,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error when parsing and terminated by "', () => {
-      const tokenizer = new Tokenizer('and"test"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('and"test"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing and terminated by /', () => {
-      const tokenizer = new Tokenizer('and/test');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('and/test');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse and terminated by (', () => {
@@ -852,21 +863,23 @@ describe('Tokenizer', () => {
     });
 
     it('should set error when parsing and terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo eq 123 and""');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 123 and""');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream and terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo eq 123 and/bar eq false"');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 123 and/bar eq false"');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream and terminated by (', () => {
@@ -986,15 +999,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error when parsing or terminated by "', () => {
-      const tokenizer = new Tokenizer('or"test"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('or"test"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing or terminated by /', () => {
-      const tokenizer = new Tokenizer('or/test');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('or/test');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse or terminated by (', () => {
@@ -1078,21 +1093,23 @@ describe('Tokenizer', () => {
     });
 
     it('should set error when parsing or terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo eq 123 or""');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 123 or""');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream or terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo eq 123 or/bar eq false"');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 123 or/bar eq false"');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream or terminated by (', () => {
@@ -1212,15 +1229,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing eq terminated by "', () => {
-      const tokenizer = new Tokenizer('eq"42"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('eq"42"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parseing eq terminated by /', () => {
-      const tokenizer = new Tokenizer('eq/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('eq/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse eq terminated by (', () => {
@@ -1315,23 +1334,25 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream eq terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo/bar eq"test" or /baz eq false');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/bar eq"test" or /baz eq false');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream eq terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo/bar eq/baz')
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/bar eq/baz');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream eq terminated by (', () => {
-      const tokenizer = new Tokenizer('/foo/bar eq(42')
+      const tokenizer = new Tokenizer('/foo/bar eq(42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1339,7 +1360,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream eq terminated by )', () => {
-      const tokenizer = new Tokenizer('/foo/bar eq)42')
+      const tokenizer = new Tokenizer('/foo/bar eq)42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1347,7 +1368,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream eq terminated by ,', () => {
-      const tokenizer = new Tokenizer('/foo/bar eq,42')
+      const tokenizer = new Tokenizer('/foo/bar eq,42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1355,7 +1376,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream eq terminated by [', () => {
-      const tokenizer = new Tokenizer('/foo/bar eq[42,24]')
+      const tokenizer = new Tokenizer('/foo/bar eq[42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1363,7 +1384,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream eq terminated by ]', () => {
-      const tokenizer = new Tokenizer('/foo/bar eq]42,24]')
+      const tokenizer = new Tokenizer('/foo/bar eq]42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1371,7 +1392,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream eq preceded by white space', () => {
-      const tokenizer = new Tokenizer('/foo/bar eq]42,24]')
+      const tokenizer = new Tokenizer('/foo/bar eq]42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1379,7 +1400,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream eq preceded by "', () => {
-      const tokenizer = new Tokenizer('"test"eq /foo/bar')
+      const tokenizer = new Tokenizer('"test"eq /foo/bar');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.eq);
@@ -1458,15 +1479,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing neq terminated by "', () => {
-      const tokenizer = new Tokenizer('neq"42"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('neq"42"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parseing neq terminated by /', () => {
-      const tokenizer = new Tokenizer('neq/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('neq/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse neq terminated by (', () => {
@@ -1561,23 +1584,25 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream neq terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo/bar neq"test" or /baz neq false');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/bar neq"test" or /baz neq false');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream neq terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo/bar neq/baz')
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/bar neq/baz');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream neq terminated by (', () => {
-      const tokenizer = new Tokenizer('/foo/bar neq(42')
+      const tokenizer = new Tokenizer('/foo/bar neq(42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1585,7 +1610,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream neq terminated by )', () => {
-      const tokenizer = new Tokenizer('/foo/bar neq)42')
+      const tokenizer = new Tokenizer('/foo/bar neq)42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1593,7 +1618,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream neq terminated by ,', () => {
-      const tokenizer = new Tokenizer('/foo/bar neq,42')
+      const tokenizer = new Tokenizer('/foo/bar neq,42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1601,7 +1626,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream neq terminated by [', () => {
-      const tokenizer = new Tokenizer('/foo/bar neq[42,24]')
+      const tokenizer = new Tokenizer('/foo/bar neq[42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1609,7 +1634,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream neq terminated by ]', () => {
-      const tokenizer = new Tokenizer('/foo/bar neq]42,24]')
+      const tokenizer = new Tokenizer('/foo/bar neq]42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1617,7 +1642,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream neq preceded by white space', () => {
-      const tokenizer = new Tokenizer('/foo/bar neq]42,24]')
+      const tokenizer = new Tokenizer('/foo/bar neq]42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1625,7 +1650,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream neq preceded by "', () => {
-      const tokenizer = new Tokenizer('"test"neq /foo/bar')
+      const tokenizer = new Tokenizer('"test"neq /foo/bar');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.neq);
@@ -1704,15 +1729,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing gt terminated by "', () => {
-      const tokenizer = new Tokenizer('gt"42"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('gt"42"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parseing gt terminated by /', () => {
-      const tokenizer = new Tokenizer('gt/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('gt/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse gt terminated by (', () => {
@@ -1807,23 +1834,25 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream gt terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo/bar gt"test" or /baz gt false');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/bar gt"test" or /baz gt false');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream gt terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo/bar gt/baz')
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/bar gt/baz');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream gt terminated by (', () => {
-      const tokenizer = new Tokenizer('/foo/bar gt(42')
+      const tokenizer = new Tokenizer('/foo/bar gt(42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1831,7 +1860,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream gt terminated by )', () => {
-      const tokenizer = new Tokenizer('/foo/bar gt)42')
+      const tokenizer = new Tokenizer('/foo/bar gt)42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1839,7 +1868,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream gt terminated by ,', () => {
-      const tokenizer = new Tokenizer('/foo/bar gt,42')
+      const tokenizer = new Tokenizer('/foo/bar gt,42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1847,7 +1876,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream gt terminated by [', () => {
-      const tokenizer = new Tokenizer('/foo/bar gt[42,24]')
+      const tokenizer = new Tokenizer('/foo/bar gt[42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1855,7 +1884,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream gt terminated by ]', () => {
-      const tokenizer = new Tokenizer('/foo/bar gt]42,24]')
+      const tokenizer = new Tokenizer('/foo/bar gt]42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1863,7 +1892,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream gt preceded by white space', () => {
-      const tokenizer = new Tokenizer('/foo/bar gt]42,24]')
+      const tokenizer = new Tokenizer('/foo/bar gt]42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -1871,7 +1900,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream gt preceded by "', () => {
-      const tokenizer = new Tokenizer('"test"gt /foo/bar')
+      const tokenizer = new Tokenizer('"test"gt /foo/bar');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.gt);
@@ -1950,15 +1979,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing gte terminated by "', () => {
-      const tokenizer = new Tokenizer('gte"42"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('gte"42"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parseing gte terminated by /', () => {
-      const tokenizer = new Tokenizer('gte/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('gte/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse gte terminated by (', () => {
@@ -2053,23 +2084,25 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream gte terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo/bar gte"test" or /baz gte false');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/bar gte"test" or /baz gte false');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream gte terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo/bar gte/baz')
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/bar gte/baz');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream gte terminated by (', () => {
-      const tokenizer = new Tokenizer('/foo/bar gte(42')
+      const tokenizer = new Tokenizer('/foo/bar gte(42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2077,7 +2110,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream gte terminated by )', () => {
-      const tokenizer = new Tokenizer('/foo/bar gte)42')
+      const tokenizer = new Tokenizer('/foo/bar gte)42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2085,7 +2118,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream gte terminated by ,', () => {
-      const tokenizer = new Tokenizer('/foo/bar gte,42')
+      const tokenizer = new Tokenizer('/foo/bar gte,42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2093,7 +2126,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream gte terminated by [', () => {
-      const tokenizer = new Tokenizer('/foo/bar gte[42,24]')
+      const tokenizer = new Tokenizer('/foo/bar gte[42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2101,7 +2134,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream gte terminated by ]', () => {
-      const tokenizer = new Tokenizer('/foo/bar gte]42,24]')
+      const tokenizer = new Tokenizer('/foo/bar gte]42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2109,7 +2142,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream gte preceded by white space', () => {
-      const tokenizer = new Tokenizer('/foo/bar gte]42,24]')
+      const tokenizer = new Tokenizer('/foo/bar gte]42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2117,7 +2150,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream gte preceded by "', () => {
-      const tokenizer = new Tokenizer('"test"gte /foo/bar')
+      const tokenizer = new Tokenizer('"test"gte /foo/bar');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.gte);
@@ -2196,15 +2229,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing lt terminated by "', () => {
-      const tokenizer = new Tokenizer('lt"42"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('lt"42"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parseing lt terminated by /', () => {
-      const tokenizer = new Tokenizer('lt/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('lt/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse lt terminated by (', () => {
@@ -2299,23 +2334,25 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream lt terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo/bar lt"test" or /baz lt false');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/bar lt"test" or /baz lt false');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream lt terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo/bar lt/baz')
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/bar lt/baz');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream lt terminated by (', () => {
-      const tokenizer = new Tokenizer('/foo/bar lt(42')
+      const tokenizer = new Tokenizer('/foo/bar lt(42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2323,7 +2360,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream lt terminated by )', () => {
-      const tokenizer = new Tokenizer('/foo/bar lt)42')
+      const tokenizer = new Tokenizer('/foo/bar lt)42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2331,7 +2368,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream lt terminated by ,', () => {
-      const tokenizer = new Tokenizer('/foo/bar lt,42')
+      const tokenizer = new Tokenizer('/foo/bar lt,42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2339,7 +2376,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream lt terminated by [', () => {
-      const tokenizer = new Tokenizer('/foo/bar lt[42,24]')
+      const tokenizer = new Tokenizer('/foo/bar lt[42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2347,7 +2384,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream lt terminated by ]', () => {
-      const tokenizer = new Tokenizer('/foo/bar lt]42,24]')
+      const tokenizer = new Tokenizer('/foo/bar lt]42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2355,7 +2392,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream lt preceded by white space', () => {
-      const tokenizer = new Tokenizer('/foo/bar lt]42,24]')
+      const tokenizer = new Tokenizer('/foo/bar lt]42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2363,7 +2400,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream lt preceded by "', () => {
-      const tokenizer = new Tokenizer('"test"lt /foo/bar')
+      const tokenizer = new Tokenizer('"test"lt /foo/bar');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.lt);
@@ -2442,15 +2479,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing lte terminated by "', () => {
-      const tokenizer = new Tokenizer('lte"42"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('lte"42"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parseing lte terminated by /', () => {
-      const tokenizer = new Tokenizer('lte/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('lte/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse lte terminated by (', () => {
@@ -2545,23 +2584,25 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream lte terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo/bar lte"test" or /baz lte false');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/bar lte"test" or /baz lte false');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream lte terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo/bar lte/baz')
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/bar lte/baz');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream lte terminated by (', () => {
-      const tokenizer = new Tokenizer('/foo/bar lte(42')
+      const tokenizer = new Tokenizer('/foo/bar lte(42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2569,7 +2610,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream lte terminated by )', () => {
-      const tokenizer = new Tokenizer('/foo/bar lte)42')
+      const tokenizer = new Tokenizer('/foo/bar lte)42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2577,7 +2618,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream lte terminated by ,', () => {
-      const tokenizer = new Tokenizer('/foo/bar lte,42')
+      const tokenizer = new Tokenizer('/foo/bar lte,42');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2585,7 +2626,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream lte terminated by [', () => {
-      const tokenizer = new Tokenizer('/foo/bar lte[42,24]')
+      const tokenizer = new Tokenizer('/foo/bar lte[42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2593,7 +2634,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream lte terminated by ]', () => {
-      const tokenizer = new Tokenizer('/foo/bar lte]42,24]')
+      const tokenizer = new Tokenizer('/foo/bar lte]42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2601,7 +2642,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream lte preceded by white space', () => {
-      const tokenizer = new Tokenizer('/foo/bar lte]42,24]')
+      const tokenizer = new Tokenizer('/foo/bar lte]42,24]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -2609,7 +2650,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream lte preceded by "', () => {
-      const tokenizer = new Tokenizer('"test"lte /foo/bar')
+      const tokenizer = new Tokenizer('"test"lte /foo/bar');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.lte);
@@ -2688,15 +2729,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing in terminated by "', () => {
-      const tokenizer = new Tokenizer('in"test"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('in"test"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing in terminated by /', () => {
-      const tokenizer = new Tokenizer('in/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('in/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse in terminated by (', () => {
@@ -2789,25 +2832,27 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream in terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo eq 42 and /bar in"test"');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 42 and /bar in"test"');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream in terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo eq 42 and /bar in/baz');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 42 and /bar in/baz');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream in terminated by (', () => {
@@ -2955,15 +3000,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsning nin terminated by "', () => {
-      const tokenizer = new Tokenizer('nin"test"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('nin"test"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsning nin terminated by /', () => {
-      const tokenizer = new Tokenizer('nin/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('nin/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse nin terminated by (', () => {
@@ -3056,25 +3103,27 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsning downstream nin terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo eq 42 and /bar nin"test"');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 42 and /bar nin"test"');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsning downstream nin terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo eq 42 and /bar nin/baz');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 42 and /bar nin/baz');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream nin terminated by (', () => {
@@ -3222,15 +3271,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing between terminated by "', () => {
-      const tokenizer = new Tokenizer('between"test"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('between"test"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing between terminated by /', () => {
-      const tokenizer = new Tokenizer('between/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('between/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse between terminated by (', () => {
@@ -3323,25 +3374,27 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream between terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo eq 42 and /bar between"a","z"');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 42 and /bar between"a","z"');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream between terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo eq 42 and /bar between/baz');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 42 and /bar between/baz');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream between terminated by (', () => {
@@ -3496,15 +3549,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing nbetween terminated by "', () => {
-      const tokenizer = new Tokenizer('nbetween"test"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('nbetween"test"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing nbetween terminated by /', () => {
-      const tokenizer = new Tokenizer('nbetween/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('nbetween/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse nbetween terminated by (', () => {
@@ -3597,25 +3652,27 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream nbetween terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo eq 42 and /bar nbetween"a","z"');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 42 and /bar nbetween"a","z"');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream nbetween terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo eq 42 and /bar nbetween/baz');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 42 and /bar nbetween/baz');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream nbetween terminated by (', () => {
@@ -3770,15 +3827,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing like terminated by "', () => {
-      const tokenizer = new Tokenizer('like"%blah"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('like"%blah"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse like terminated by /', () => {
-      const tokenizer = new Tokenizer('like/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('like/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse like terminated by (', () => {
@@ -3873,25 +3932,27 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream like terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar like"bl_h"');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo gt 42 and /bar like"bl_h"');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream like terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar like/baz');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo gt 42 and /bar like/baz');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream like terminated by (', () => {
@@ -4044,15 +4105,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing nlike terminated by "', () => {
-      const tokenizer = new Tokenizer('nlike"%blah"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('nlike"%blah"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse nlike terminated by /', () => {
-      const tokenizer = new Tokenizer('nlike/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('nlike/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse nlike terminated by (', () => {
@@ -4147,25 +4210,27 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream nlike terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike"bl_h"');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike"bl_h"');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream nlike terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike/baz');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike/baz');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream nlike terminated by (', () => {
@@ -4341,15 +4406,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing number terminated by "', () => {
-      const tokenizer = new Tokenizer('42"test"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('42"test"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing number terminated by /', () => {
-      const tokenizer = new Tokenizer('42"test"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('42"test"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse number terminated by (', () => {
@@ -4457,27 +4524,29 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream number terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo neq "test" or /bar eq 42"test"');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo neq "test" or /bar eq 42"test"');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing downstream number terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo neq "test" or /bar eq 42"test"');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo neq "test" or /bar eq 42"test"');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream number terminated by (', () => {
@@ -4663,15 +4732,17 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing unknown terminated by "', () => {
-      const tokenizer = new Tokenizer('asdf"test"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('asdf"test"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parse unknown terminated by /', () => {
-      const tokenizer = new Tokenizer('asdf/foo');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('asdf/foo');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse unknown terminated by (', () => {
@@ -4776,23 +4847,25 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing downstream unknown terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo eq 42 and asdf"test" neq true');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 42 and asdf"test" neq true');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream unknown terminated by /', () => {
-      const tokenizer = new Tokenizer('/foo eq 42 and asdf/bar neq true');
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq 42 and asdf/bar neq true');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should parse downstream unknown terminated by (', () => {
@@ -4862,7 +4935,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream unknown preceded by "', () => {
-      const tokenizer = new Tokenizer('/foo eq 42 or /bar gt 21"test"asdf and');
+      const tokenizer = new Tokenizer('/foo eq 42 or /bar gt 2 "test"asdf and');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4956,6 +5029,14 @@ describe('Tokenizer', () => {
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.target);
       assert.strictEqual(tokenizer.current.value, '');
+    });
+
+    it('should error on zero-length target next to target indicator', () => {
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('//');
+        tokenizer.next();
+        tokenizer.next();
+      });
     });
 
     it('should parse target', () => {
@@ -5477,28 +5558,32 @@ describe('Tokenizer', () => {
     });
 
     it('should set error parsing root target terminated by "', () => {
-      const tokenizer = new Tokenizer('/"asdf"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/"asdf"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing target terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo"asdf"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo"asdf"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing numeric target terminated by "', () => {
-      const tokenizer = new Tokenizer('/2"asdf"');
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/2"asdf"');
+        tokenizer.next();
+      }, errors.ParserError);
     });
 
     it('should set error parsing blank target subkey terminated by "', () => {
-      const tokenizer = new Tokenizer('/foo/"asdf"');
-      tokenizer.next();
-      tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.error);
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo/"asdf"');
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
     });
   });
 
