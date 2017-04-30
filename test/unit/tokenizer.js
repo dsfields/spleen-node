@@ -3821,14 +3821,14 @@ describe('Tokenizer', () => {
     });
 
     it('should parse like terminated by white space', () => {
-      const tokenizer = new Tokenizer('like\u2029"%blah"');
+      const tokenizer = new Tokenizer('like\u2029"*blah"');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.like);
     });
 
     it('should set error parsing like terminated by "', () => {
       assert.throws(() => {
-        const tokenizer = new Tokenizer('like"%blah"');
+        const tokenizer = new Tokenizer('like"*blah"');
         tokenizer.next();
       }, errors.ParserError);
     });
@@ -3841,78 +3841,78 @@ describe('Tokenizer', () => {
     });
 
     it('should parse like terminated by (', () => {
-      const tokenizer = new Tokenizer('like("%blah")');
+      const tokenizer = new Tokenizer('like("*blah")');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.like);
     });
 
     it('should parse like terminated by )', () => {
-      const tokenizer = new Tokenizer('like)"%blah")');
+      const tokenizer = new Tokenizer('like)"*blah")');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.like);
     });
 
     it('should parse like terminated by ,', () => {
-      const tokenizer = new Tokenizer('like,"%blah"');
+      const tokenizer = new Tokenizer('like,"*blah"');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.like);
     });
 
     it('should parse like terminated by [', () => {
-      const tokenizer = new Tokenizer('like["%blah"]');
+      const tokenizer = new Tokenizer('like["*blah"]');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.like);
     });
 
     it('should parse like terminated by ]', () => {
-      const tokenizer = new Tokenizer('like]"%blah"]');
+      const tokenizer = new Tokenizer('like]"*blah"]');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.like);
     });
 
     it('should parse like preceded by white space', () => {
-      const tokenizer = new Tokenizer('\u2009like "%blah"');
+      const tokenizer = new Tokenizer('\u2009like "*blah"');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.like);
     });
 
     it('should parse like preceded by "', () => {
-      const tokenizer = new Tokenizer('"foobar"like "%bar"');
+      const tokenizer = new Tokenizer('"foobar"like "*bar"');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.like);
     });
 
     it('should parse like preceded by (', () => {
-      const tokenizer = new Tokenizer('(like "%bar")');
+      const tokenizer = new Tokenizer('(like "*bar")');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.like);
     });
 
     it('should parse like preceded by )', () => {
-      const tokenizer = new Tokenizer(')like "%bar")');
+      const tokenizer = new Tokenizer(')like "*bar")');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.like);
     });
 
     it('should parse like preceded by ,', () => {
-      const tokenizer = new Tokenizer(',like "%bar"');
+      const tokenizer = new Tokenizer(',like "*bar"');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.like);
     });
 
     it('should parse like preceded by [', () => {
-      const tokenizer = new Tokenizer('[like "%bar"]');
+      const tokenizer = new Tokenizer('[like "*bar"]');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.like);
     });
 
     it('should parse like preceded by ]', () => {
-      const tokenizer = new Tokenizer('["foobar"]like "%bar"');
+      const tokenizer = new Tokenizer('["foobar"]like "*bar"');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -3956,7 +3956,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream like terminated by (', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar like("b_ah%")');
+      const tokenizer = new Tokenizer('/foo gt 42 and /bar like("b_ah*")');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -3967,7 +3967,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream like terminated by )', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar like)"b_ah%")');
+      const tokenizer = new Tokenizer('/foo gt 42 and /bar like)"b_ah*")');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -3978,7 +3978,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream like terminated by ,', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar like,"b_ah%"');
+      const tokenizer = new Tokenizer('/foo gt 42 and /bar like,"b_ah*"');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -3989,7 +3989,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream like terminated by [', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar like["b_ah%"]');
+      const tokenizer = new Tokenizer('/foo gt 42 and /bar like["b_ah*"]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4000,7 +4000,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream like terminated by ]', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar like]"b_ah%"]');
+      const tokenizer = new Tokenizer('/foo gt 42 and /bar like]"b_ah*"]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4011,7 +4011,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream like preceded by white space', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar\u2006like "b_ah%"');
+      const tokenizer = new Tokenizer('/foo gt 42 and /bar\u2006like "b_ah*"');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4022,7 +4022,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream like preceded by "', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and "bxahasdf"like "b_ah%"');
+      const tokenizer = new Tokenizer('/foo gt 42 and "bxahasdf"like "b_ah*"');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4033,7 +4033,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream like preceded by (', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 or /bar (like "b_ah%")');
+      const tokenizer = new Tokenizer('/foo gt 42 or /bar (like "b_ah*")');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4045,7 +4045,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream like preceded by )', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 or /bar )like "b_ah%")');
+      const tokenizer = new Tokenizer('/foo gt 42 or /bar )like "b_ah*")');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4057,7 +4057,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream like preceded by ,', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 or /bar ,like "b_ah%"');
+      const tokenizer = new Tokenizer('/foo gt 42 or /bar ,like "b_ah*"');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4069,7 +4069,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream like preceded by [', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 or /bar [like "b_ah%"]');
+      const tokenizer = new Tokenizer('/foo gt 42 or /bar [like "b_ah*"]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4081,7 +4081,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream like preceded by ]', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 or /bar ]like "b_ah%"]');
+      const tokenizer = new Tokenizer('/foo gt 42 or /bar ]like "b_ah*"]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4099,14 +4099,14 @@ describe('Tokenizer', () => {
     });
 
     it('should parse nlike terminated by white space', () => {
-      const tokenizer = new Tokenizer('nlike\u2029"%blah"');
+      const tokenizer = new Tokenizer('nlike\u2029"*blah"');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.nlike);
     });
 
     it('should set error parsing nlike terminated by "', () => {
       assert.throws(() => {
-        const tokenizer = new Tokenizer('nlike"%blah"');
+        const tokenizer = new Tokenizer('nlike"*blah"');
         tokenizer.next();
       }, errors.ParserError);
     });
@@ -4119,78 +4119,78 @@ describe('Tokenizer', () => {
     });
 
     it('should parse nlike terminated by (', () => {
-      const tokenizer = new Tokenizer('nlike("%blah")');
+      const tokenizer = new Tokenizer('nlike("*blah")');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.nlike);
     });
 
     it('should parse nlike terminated by )', () => {
-      const tokenizer = new Tokenizer('nlike)"%blah")');
+      const tokenizer = new Tokenizer('nlike)"*blah")');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.nlike);
     });
 
     it('should parse nlike terminated by ,', () => {
-      const tokenizer = new Tokenizer('nlike,"%blah"');
+      const tokenizer = new Tokenizer('nlike,"*blah"');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.nlike);
     });
 
     it('should parse nlike terminated by [', () => {
-      const tokenizer = new Tokenizer('nlike["%blah"]');
+      const tokenizer = new Tokenizer('nlike["*blah"]');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.nlike);
     });
 
     it('should parse nlike terminated by ]', () => {
-      const tokenizer = new Tokenizer('nlike]"%blah"]');
+      const tokenizer = new Tokenizer('nlike]"*blah"]');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.nlike);
     });
 
     it('should parse nlike preceded by white space', () => {
-      const tokenizer = new Tokenizer('\u2009nlike "%blah"');
+      const tokenizer = new Tokenizer('\u2009nlike "*blah"');
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.nlike);
     });
 
     it('should parse nlike preceded by "', () => {
-      const tokenizer = new Tokenizer('"foobar"nlike "%bar"');
+      const tokenizer = new Tokenizer('"foobar"nlike "*bar"');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.nlike);
     });
 
     it('should parse nlike preceded by (', () => {
-      const tokenizer = new Tokenizer('(nlike "%bar")');
+      const tokenizer = new Tokenizer('(nlike "*bar")');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.nlike);
     });
 
     it('should parse nlike preceded by )', () => {
-      const tokenizer = new Tokenizer(')nlike "%bar")');
+      const tokenizer = new Tokenizer(')nlike "*bar")');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.nlike);
     });
 
     it('should parse nlike preceded by ,', () => {
-      const tokenizer = new Tokenizer(',nlike "%bar"');
+      const tokenizer = new Tokenizer(',nlike "*bar"');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.nlike);
     });
 
     it('should parse nlike preceded by [', () => {
-      const tokenizer = new Tokenizer('[nlike "%bar"]');
+      const tokenizer = new Tokenizer('[nlike "*bar"]');
       tokenizer.next();
       tokenizer.next();
       assert.strictEqual(tokenizer.current.type, TokenType.nlike);
     });
 
     it('should parse nlike preceded by ]', () => {
-      const tokenizer = new Tokenizer('["foobar"]nlike "%bar"');
+      const tokenizer = new Tokenizer('["foobar"]nlike "*bar"');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4234,7 +4234,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream nlike terminated by (', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike("b_ah%")');
+      const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike("b_ah*")');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4245,7 +4245,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream nlike terminated by )', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike)"b_ah%")');
+      const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike)"b_ah*")');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4256,7 +4256,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream nlike terminated by ,', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike,"b_ah%"');
+      const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike,"b_ah*"');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4267,7 +4267,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream nlike terminated by [', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike["b_ah%"]');
+      const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike["b_ah*"]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4278,7 +4278,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream nlike terminated by ]', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike]"b_ah%"]');
+      const tokenizer = new Tokenizer('/foo gt 42 and /bar nlike]"b_ah*"]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4289,7 +4289,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream nlike preceded by white space', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and /bar\u2006nlike "b_ah%"');
+      const tokenizer = new Tokenizer('/foo gt 42 and /bar\u2006nlike "b_ah*"');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4300,7 +4300,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream nlike preceded by "', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 and "bxahasdf"nlike "b_ah%"');
+      const tokenizer = new Tokenizer('/foo gt 42 and "bxahasdf"nlike "b_ah*"');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4311,7 +4311,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream nlike preceded by (', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 or /bar (nlike "b_ah%")');
+      const tokenizer = new Tokenizer('/foo gt 42 or /bar (nlike "b_ah*")');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4323,7 +4323,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream nlike preceded by )', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 or /bar )nlike "b_ah%")');
+      const tokenizer = new Tokenizer('/foo gt 42 or /bar )nlike "b_ah*")');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4335,7 +4335,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream nlike preceded by ,', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 or /bar ,nlike "b_ah%"');
+      const tokenizer = new Tokenizer('/foo gt 42 or /bar ,nlike "b_ah*"');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4347,7 +4347,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream nlike preceded by [', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 or /bar [nlike "b_ah%"]');
+      const tokenizer = new Tokenizer('/foo gt 42 or /bar [nlike "b_ah*"]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
@@ -4359,7 +4359,7 @@ describe('Tokenizer', () => {
     });
 
     it('should parse downstream nlike preceded by ]', () => {
-      const tokenizer = new Tokenizer('/foo gt 42 or /bar ]nlike "b_ah%"]');
+      const tokenizer = new Tokenizer('/foo gt 42 or /bar ]nlike "b_ah*"]');
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();

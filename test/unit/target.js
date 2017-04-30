@@ -9,6 +9,12 @@ const Target = require('../../lib/target');
 describe('Target', () => {
 
   describe('#jsonPointer', () => {
+    it('should throw if pointer not string', () => {
+      assert.throws(() => {
+        Target.jsonPointer(42);
+      }, errors.TypeError);
+    });
+
     it('should throw if JSON pointer invalid', () => {
       assert.throws(() => {
         Target.jsonPointer('foo/bar/baz');
@@ -98,6 +104,18 @@ describe('Target', () => {
       const target = new Target(['foo', 'bar', 'baz', 2], '/foo/bar/baz');
       const result = target.toJsonPointer();
       assert.strictEqual(result, '/foo/bar/baz/2');
+    });
+
+    it('should URL encode string portions of path', () => {
+      const target = new Target(['?foo', 'bar&'], '/?foo/bar&');
+      const result = target.toJsonPointer(true);
+      assert.strictEqual(result, '/%3Ffoo/bar%26');
+    });
+
+    it('should stringify numerbers when URL encoding', () => {
+      const target = new Target(['foo', 2], '/foo');
+      const result = target.toJsonPointer(true);
+      assert.strictEqual(result, '/foo/2');
     });
   });
 

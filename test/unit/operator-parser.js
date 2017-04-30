@@ -4,7 +4,6 @@ const assert = require('chai').assert;
 
 const errors = require('../../lib/errors');
 const OperatorParser = require('../../lib/operator-parser');
-const OperatorType = require('../../lib/operator-type');
 const Tokenizer = require('../../lib/tokenizer');
 
 
@@ -15,91 +14,91 @@ describe('OperatorParser', () => {
       const tokenizer = new Tokenizer('eq');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.eq);
+      assert.strictEqual(result, 'eq');
     });
 
     it('should parse neq', () => {
       const tokenizer = new Tokenizer('neq');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.neq);
+      assert.strictEqual(result, 'neq');
     });
 
     it('should parse gt', () => {
       const tokenizer = new Tokenizer('gt');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.gt);
+      assert.strictEqual(result, 'gt');
     });
 
     it('should parse gte', () => {
       const tokenizer = new Tokenizer('gte');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.gte);
+      assert.strictEqual(result, 'gte');
     });
 
     it('should parse lt', () => {
       const tokenizer = new Tokenizer('lt');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.lt);
+      assert.strictEqual(result, 'lt');
     });
 
     it('should parse lte', () => {
       const tokenizer = new Tokenizer('lte');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.lte);
+      assert.strictEqual(result, 'lte');
     });
 
     it('should parse in', () => {
       const tokenizer = new Tokenizer('in');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.in);
+      assert.strictEqual(result, 'in');
     });
 
     it('should parse nin', () => {
       const tokenizer = new Tokenizer('nin');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.nin);
+      assert.strictEqual(result, 'nin');
     });
 
     it('should parse between', () => {
       const tokenizer = new Tokenizer('between');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.between);
+      assert.strictEqual(result, 'between');
     });
 
     it('should parse nbetween', () => {
       const tokenizer = new Tokenizer('nbetween');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.nbetween);
+      assert.strictEqual(result, 'nbetween');
     });
 
     it('should parse like', () => {
       const tokenizer = new Tokenizer('like');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.like);
+      assert.strictEqual(result, 'like');
     });
 
     it('should parse nlike', () => {
       const tokenizer = new Tokenizer('nlike');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.nlike);
+      assert.strictEqual(result, 'nlike');
     });
 
     it('should return unknown for non-operator in !strict', () => {
       const tokenizer = new Tokenizer('asdf');
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.unknown);
+      assert.strictEqual(result, 'unknown');
     });
 
     it('should throw on non-operator in strict', () => {
@@ -115,7 +114,7 @@ describe('OperatorParser', () => {
       tokenizer.next();
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.eq);
+      assert.strictEqual(result, 'eq');
     });
 
     it('should parse neq with advanced tokenizer', () => {
@@ -123,7 +122,7 @@ describe('OperatorParser', () => {
       tokenizer.next();
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.neq);
+      assert.strictEqual(result, 'neq');
     });
 
     it('should parse gt with advanced tokenizer', () => {
@@ -131,7 +130,7 @@ describe('OperatorParser', () => {
       tokenizer.next();
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.gt);
+      assert.strictEqual(result, 'gt');
     });
 
     it('should parse gte with advanced tokenizer', () => {
@@ -139,7 +138,7 @@ describe('OperatorParser', () => {
       tokenizer.next();
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.gte);
+      assert.strictEqual(result, 'gte');
     });
 
     it('should parse lt with advanced tokenizer', () => {
@@ -147,7 +146,7 @@ describe('OperatorParser', () => {
       tokenizer.next();
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.lt);
+      assert.strictEqual(result, 'lt');
     });
 
     it('should parse lte with advanced tokenizer', () => {
@@ -155,7 +154,7 @@ describe('OperatorParser', () => {
       tokenizer.next();
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.lte);
+      assert.strictEqual(result, 'lte');
     });
 
     it('should parse in with advanced tokenizer', () => {
@@ -163,7 +162,7 @@ describe('OperatorParser', () => {
       tokenizer.next();
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.in);
+      assert.strictEqual(result, 'in');
     });
 
     it('should parse nin with advanced tokenizer', () => {
@@ -171,7 +170,7 @@ describe('OperatorParser', () => {
       tokenizer.next();
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.nin);
+      assert.strictEqual(result, 'nin');
     });
 
     it('should parse between with advanced tokenizer', () => {
@@ -179,7 +178,7 @@ describe('OperatorParser', () => {
       tokenizer.next();
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.between);
+      assert.strictEqual(result, 'between');
     });
 
     it('should parse nbetween with advanced tokenizer', () => {
@@ -187,7 +186,7 @@ describe('OperatorParser', () => {
       tokenizer.next();
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.nbetween);
+      assert.strictEqual(result, 'nbetween');
     });
 
     it('should parse like with advanced tokenizer', () => {
@@ -195,7 +194,7 @@ describe('OperatorParser', () => {
       tokenizer.next();
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.like);
+      assert.strictEqual(result, 'like');
     });
 
     it('should parse nlike with advanced tokenizer', () => {
@@ -203,7 +202,7 @@ describe('OperatorParser', () => {
       tokenizer.next();
       const parser = new OperatorParser(tokenizer);
       const result = parser.parse();
-      assert.strictEqual(result, OperatorType.nlike);
+      assert.strictEqual(result, 'nlike');
     });
   });
 

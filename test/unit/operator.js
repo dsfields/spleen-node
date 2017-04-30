@@ -5,7 +5,6 @@ const assert = require('chai').assert;
 const errors = require('../../lib/errors');
 const Like = require('../../lib/like');
 const Operator = require('../../lib/operator');
-const OperatorType = require('../../lib/operator-type');
 const Range = require('../../lib/range');
 
 
@@ -14,62 +13,62 @@ describe('Operator', () => {
   describe('#parse', () => {
     it('should parse eq', () => {
       const result = Operator.parse('eq');
-      assert.strictEqual(result.type, OperatorType.eq);
+      assert.strictEqual(result.type, 'eq');
     });
 
     it('should parse neq', () => {
       const result = Operator.parse('neq');
-      assert.strictEqual(result.type, OperatorType.neq);
+      assert.strictEqual(result.type, 'neq');
     });
 
     it('should parse gt', () => {
       const result = Operator.parse('gt');
-      assert.strictEqual(result.type, OperatorType.gt);
+      assert.strictEqual(result.type, 'gt');
     });
 
     it('should parse gte', () => {
       const result = Operator.parse('gte');
-      assert.strictEqual(result.type, OperatorType.gte);
+      assert.strictEqual(result.type, 'gte');
     });
 
     it('should parse lt', () => {
       const result = Operator.parse('lt');
-      assert.strictEqual(result.type, OperatorType.lt);
+      assert.strictEqual(result.type, 'lt');
     });
 
     it('should parse lte', () => {
       const result = Operator.parse('lte');
-      assert.strictEqual(result.type, OperatorType.lte);
+      assert.strictEqual(result.type, 'lte');
     });
 
     it('should parse in', () => {
       const result = Operator.parse('in');
-      assert.strictEqual(result.type, OperatorType.in);
+      assert.strictEqual(result.type, 'in');
     });
 
     it('should parse nin', () => {
       const result = Operator.parse('nin');
-      assert.strictEqual(result.type, OperatorType.nin);
+      assert.strictEqual(result.type, 'nin');
     });
 
     it('should parse between', () => {
       const result = Operator.parse('between');
-      assert.strictEqual(result.type, OperatorType.between);
+      assert.strictEqual(result.type, 'between');
     });
 
     it('should parse nbetween', () => {
       const result = Operator.parse('nbetween');
-      assert.strictEqual(result.type, OperatorType.nbetween);
+      assert.strictEqual(result.type, 'nbetween');
     });
 
     it('should parse like', () => {
       const result = Operator.parse('like');
-      assert.strictEqual(result.type, OperatorType.like);
+      assert.strictEqual(result.type, 'like');
     });
 
     it('should parse nlike', () => {
       const result = Operator.parse('nlike');
-      assert.strictEqual(result.type, OperatorType.nlike);
+      assert.strictEqual(result.type, 'nlike');
     });
 
     it('should throw if non-operator', () => {
@@ -179,60 +178,60 @@ describe('Operator', () => {
 
     it('should be true on between match', () => {
       const op = Operator.between;
-      const result = op.match(42, Range.from(1, 42));
+      const result = op.match(42, new Range(1, 42));
       assert.isTrue(result);
     });
 
     it('should be false on between miss', () => {
       const op = Operator.between;
-      const result = op.match(42, Range.from(1, 24));
+      const result = op.match(42, new Range(1, 24));
       assert.isFalse(result);
     });
 
     it('should be true on nbetween match', () => {
       const op = Operator.nbetween;
-      const result = op.match(42, Range.from(1, 24));
+      const result = op.match(42, new Range(1, 24));
       assert.isTrue(result);
     });
 
     it('should be false on nbetween miss', () => {
       const op = Operator.nbetween;
-      const result = op.match(42, Range.from(1, 42));
+      const result = op.match(42, new Range(1, 42));
       assert.isFalse(result);
     });
 
     it('should be true on like match', () => {
       const op = Operator.like;
-      const result = op.match('foo', new Like(0, '%foo%'));
+      const result = op.match('foo', new Like('*foo*'));
       assert.isTrue(result);
     });
 
     it('should be false on like miss', () => {
       const op = Operator.like;
-      const result = op.match('oof', new Like(0, '%foo%'));
+      const result = op.match('oof', new Like('*foo*'));
       assert.isFalse(result);
     });
 
     it('should be true on nlike match', () => {
       const op = Operator.nlike;
-      const result = op.match('oof', new Like(0, '%foo%'));
+      const result = op.match('oof', new Like('*foo*'));
       assert.isTrue(result);
     });
 
     it('should be false on nlike miss', () => {
       const op = Operator.nlike;
-      const result = op.match('foo', new Like(0, '%foo%'));
+      const result = op.match('foo', new Like('*foo*'));
       assert.isFalse(result);
     });
 
     it('should throw on unknonwn operator', () => {
       assert.throws(() => {
-        const op = new Operator(OperatorType.unknown);
+        const op = new Operator('unknown');
         op.match(42, 42);
       }, errors.MatchError);
     });
 
-    it('should throw if two arguments no passed', () => {
+    it('should throw if two arguments not passed', () => {
       assert.throws(() => {
         const op = Operator.eq;
         op.match(42);
@@ -273,6 +272,57 @@ describe('Operator', () => {
       assert.throws(() => {
         Operator.nlike.match('foo', 'derp');
       }, TypeError);
+    });
+  });
+
+
+  describe('#toString', () => {
+    it('should return eq', () => {
+      assert.strictEqual(Operator.eq.toString(), 'eq');
+    });
+
+    it('should return neq', () => {
+      assert.strictEqual(Operator.neq.toString(), 'neq');
+    });
+
+    it('should return gt', () => {
+      assert.strictEqual(Operator.gt.toString(), 'gt');
+    });
+
+    it('should return gte', () => {
+      assert.strictEqual(Operator.gte.toString(), 'gte');
+    });
+
+    it('should return lt', () => {
+      assert.strictEqual(Operator.lt.toString(), 'lt');
+    });
+
+    it('should return lte', () => {
+      assert.strictEqual(Operator.lte.toString(), 'lte');
+    });
+
+    it('should return in', () => {
+      assert.strictEqual(Operator.in.toString(), 'in');
+    });
+
+    it('should return nin', () => {
+      assert.strictEqual(Operator.nin.toString(), 'nin');
+    });
+
+    it('should return between', () => {
+      assert.strictEqual(Operator.between.toString(), 'between');
+    });
+
+    it('should return nbetween', () => {
+      assert.strictEqual(Operator.nbetween.toString(), 'nbetween');
+    });
+
+    it('should return like', () => {
+      assert.strictEqual(Operator.like.toString(), 'like');
+    });
+
+    it('should return nlike', () => {
+      assert.strictEqual(Operator.nlike.toString(), 'nlike');
     });
   });
 
