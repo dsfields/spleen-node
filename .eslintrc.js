@@ -3,6 +3,13 @@ module.exports = {
   "plugins": [],
   "rules": {
     "arrow-body-style": 0,
+    "comma-dangle": ["error", {
+      "arrays": "always-multiline",
+      "objects": "always-multiline",
+      "imports": "always-multiline",
+      "exports": "always-multiline",
+      "functions": "never"
+    }],
     "curly": 0,
     "func-names": 0,
     "max-len": ["error", 80],

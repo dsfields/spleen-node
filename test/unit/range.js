@@ -6,7 +6,7 @@ const errors = require('../../lib/errors');
 const Range = require('../../lib/range');
 
 
-describe('RangeParser', () => {
+describe('Range', () => {
 
   describe('#constructor', () => {
     it('should throw if lower is not string or number', () => {
