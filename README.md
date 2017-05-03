@@ -14,8 +14,9 @@ __Contents__
   * [Building Filters](#building-filters)
   * [API](#api)
     + [Module](#module)
+    + [Class: `Clause`](#class-clause)
     + [Class: `Filter`](#class-filter)
-    + [Class: `Operator`](#class-operator)
+    + [Class: `Like`](#class-like)
     + [Class: `Range`](#class-range)
     + [Class: `Target`](#class-target)
   * [Conversions](#conversions)
@@ -374,7 +375,7 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
         - `Clause.prototype.lte()`: sets the operator to `lte` (less than or equal to).
 
-        __Children__
+        Children:
 
           - `Clause.prototype.target(value)`: ets the object of the `Clause` to an instance of `Target`.
 
@@ -394,7 +395,7 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
         - `Clause.prototype.nin()`: sets the operator to `nin` (not in array).
       
-        __Children__
+        Children:
 
           - `Clause.prototype.array(value)`: sets the `object` of the `Clause` to an array.
 
@@ -408,7 +409,7 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
         - `Clause.prototype.nbetween()`: sets the operator to `nbetween` (not between two values).
       
-        __Children__
+        Children:
 
           - `Clause.prototype.rante(lower, upper)`: a range of values that the value of subject should fall between.
 
@@ -424,9 +425,13 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
         - `Clause.prototype.nlike()`: sets the operator to `nlike` (not like a string pattern)
 
-        __Children__
+        Children:
 
-          - `Cluase.prototype.pattern()`
+          - `Cluase.prototype.pattern(value)`: sets the object to a string matching pattern.  This method wraps `value` in an instance of `Like`.
+
+            _Parameters_
+
+              - `value`: _(required)_ a string value using string matching the wildcards described in "[Syntax](#syntax)."
 
 #### Class: `Filter`
 
