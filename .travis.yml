@@ -15,3 +15,6 @@ before_script:
 script:
   - npm test
   - npm run lint
+
+after_script:
+  - "npm install coveralls@^2.11.1 && cat ./coverage/lcov.info | ./node_modules/.bin/coveralls"

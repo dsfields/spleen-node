@@ -1,5 +1,7 @@
 # spleen
 
+[![Build Status](https://secure.travis-ci.org/dsfields/spleen-node.svg)](https://travis-ci.org/dsfields/spleen-node) [![Coverage Status](https://coveralls.io/repos/github/dsfields/spleen-node/badge.svg?branch=master)](https://coveralls.io/github/dsfields/spleen-node?branch=master)
+
 Representing filter expressions across application layers is a pretty common problem.  Say we have a REST endpoint that accepts a filter, which is then deserialized, passed to your domain logic for processing, and then passed into your data access layer for querying information.  There are a couple of issues that come out of this scenario.  How is the filter expression formatted when it's passed in via an HTTP request?  How do we pass this expression to our domain logic and data access layers without leaking implementation details?  The `spleen` module seeks to solve these issues.
 
 There are a number of competing methods for solving this issue.  Most notably GraphQL and OData.  However, these tools are not suitable for all use cases.  The `spleen` module is ideally suited for RESTful and intent-based API designs, and requires minimal effort to implement.
