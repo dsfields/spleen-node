@@ -1,16 +1,17 @@
 language: node_js
+
 node_js:
   - 6
+
+dist: trusty
+
+sudo: required
+
 before_script:
   - npm install -g mocha
   - npm install -g istanbul
-  - npm install -g eslint
+  - npm install -g nyc
+
 script:
   - npm test
   - npm run lint
-sudo: required
-dist: trusty
-notifications:
-  slack:
-    rooms:
-      secure: u23Sw17hkEExH36jmoMObwkCkcFZY2HpQ461mMfCyYriBASKy3RYC7fDGlWGP4gyQfohMh8ewBpMjM52ORDEJuTFOiMi9R9ebFPPZ/2NIcW8U4Nk23iIzaPHMvDxLVTBNfZP6g3jil9u6nO6Qz+WaW/wHAu5cCR51rlq7p7Xj1raFtTV+suA+DL1zhMETPz8dxcLw5rL6h2hlQquIKQAvq8k476aE5T0X/oz/OyibqFMvK4ogLnlBuVn9dPUfdmlOcJnBuMhaPgBAE5EiejKIEsI4LY80ZlOh0WLf5AwPI8nrYB3VQ13W0FRzYCYOSzImc1VHqRn+22iVRw3/1Vm6Fi1zxEI4Jw3N9PjIN744QhUxOJJ/6h1eHRi/AaDKdMJoAXnLzMBXEhT20tNSmLFopMdiSvOpoBi940nDQZCOdAJH5zpujtXkvNWkSzbZHs31psrjlaypJ+shUaPp8K4ge9qqxB4DLMRtJ6LKJDsqgcMB6CTUfFLdsTVoXmL+gtr6KyaJKRu2unE/TTu7WYrObwA/q5ipqF87jWdyfc47nQ1BcYTuvSlIj3XvadIOk+QWwdDchIizIs3q80wSltBlopRzP5GCyaMuP1FVmSr5P4JDmfGgF1u8QaPC4ohGwSMSIIQVZAzYYW3MoPNNjbMtzkqB4bSpwJSzvVpvz+G6ck=

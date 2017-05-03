@@ -2,7 +2,6 @@
 
 const assert = require('chai').assert;
 
-const errors = require('../../lib/errors');
 const Range = require('../../lib/range');
 
 

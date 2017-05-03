@@ -44,7 +44,7 @@ describe('Tokenizer', () => {
       assert.isFalse(tokenizer.isStart);
     });
   });
-  
+
 
   describe('#isEnd', () => {
     it('should return true if cursor at or past length', () => {
