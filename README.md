@@ -201,7 +201,7 @@ The following is a list of all possible values for the various types of terms us
 
   * `<object:search/>`:
 
-    + `"%match_pattern%"`: a set of characters and wildcards used for matching string patterns.  Wildcards include:
+    + `*match_pattern*"`: a set of characters and wildcards used for matching string patterns.  Wildcards include:
 
       - `*`: match zero or more of any character.  Most like pattern formats use a `%` for this purpose.  The `spleen` module uses `*` to be more URL-friendly.
 
@@ -271,7 +271,7 @@ const filter = Filter
     Clause
       .target('/foo')
       .eq()
-      .literal('bar)
+      .literal('bar')
   )
   .and(
     Clause
@@ -344,7 +344,7 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
   * __Methods__
 
-  Many of the methods for `Clause` only become available after a certain method has been called.  All instances of `Clause` are constructed using one of its factory methods:
+    Many of the methods for `Clause` only become available after a certain method has been called.  All instances of `Clause` are constructed using one of its factory methods:
 
     + `Clause.target(value)`: sets the subject of the `Clause` to an instance of `Target`.
 
@@ -358,75 +358,75 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
         - `value`: _(required)_ a string, number, or Boolean value.
   
-  Once the `subject` of the `Clause` has been set, available methods begin branching.  Calling one method itself unavailable, while also enabling methods in the following fashion:
+    Once the `subject` of the `Clause` has been set, available methods begin branching.  Calling one method itself unavailable, while also enabling methods in the following fashion:
 
-    + __Comparison__
+      + __Comparison__
 
-      - `Clause.prototype.eq()`: sets the operator to `eq` (equal to).
+        - `Clause.prototype.eq()`: sets the operator to `eq` (equal to).
 
-      - `Clause.prototype.neq()`: sets the operator to `neq` (not equal to).
+        - `Clause.prototype.neq()`: sets the operator to `neq` (not equal to).
 
-      - `Clause.prototype.gt()`: sets the operator to `gt` (greater than).
+        - `Clause.prototype.gt()`: sets the operator to `gt` (greater than).
 
-      - `Clause.prototype.gte()`: sets the operator to `gt` (greater than or equal to).
+        - `Clause.prototype.gte()`: sets the operator to `gt` (greater than or equal to).
 
-      - `Clause.prototype.lt()`: sets the operator to `lt` (less than).
+        - `Clause.prototype.lt()`: sets the operator to `lt` (less than).
 
-      - `Clause.prototype.lte()`: sets the operator to `lte` (less than or equal to).
+        - `Clause.prototype.lte()`: sets the operator to `lte` (less than or equal to).
 
-    __Children__
+      __Children__
 
-      - `Clause.prototype.target(value)`: ets the object of the `Clause` to an instance of `Target`.
+        - `Clause.prototype.target(value)`: ets the object of the `Clause` to an instance of `Target`.
 
-        _Parameters_
+          _Parameters_
 
-          - `value`: _(required)_ a JSON-pointer string.
+            - `value`: _(required)_ a JSON-pointer string.
+        
+        - `Clause.prototype.literal(value)`: sets the object of the `Clause` to a literal.
+
+          _Parameters_
+
+            - `value`: _(required)_ a string, number, or Boolean value.
+
+      + __Array__
+
+        - `Clause.prototype.in()`: sets the operator to `in` (in array).
+
+        - `Clause.prototype.nin()`: sets the operator to `nin` (not in array).
       
-      - `Clause.prototype.literal(value)`: sets the object of the `Clause` to a literal.
+      __Children__
 
-        _Parameters_
+        - `Clause.prototype.array(value)`: sets the `object` of the `Clause` to an array.
 
-          - `value`: _(required)_ a string, number, or Boolean value.
+          _Parameters_
 
-    + __Array__
+            - `value`: _(required)_ an array of strings, numbers, and Booleans.
 
-      - `Clause.prototype.in()`: sets the operator to `in` (in array).
+      + __Range__
 
-      - `Clause.prototype.nin()`: sets the operator to `nin` (not in array).
-    
-    __Children__
+        - `Clause.prototype.between()`: sets the operator to `between` (between two values).
 
-      - `Clause.prototype.array(value)`: sets the `object` of the `Clause` to an array.
+        - `Clause.prototype.nbetween()`: sets the operator to `nbetween` (not between two values).
+      
+      __Children__
 
-        _Parameters_
+        - `Clause.prototype.rante(lower, upper)`: a range of values that the value of subject should fall between.
 
-          - `value`: _(required)_ an array of strings, numbers, and Booleans.
+          _Parameters_
 
-    + __Range__
+            - `lower`: _(required)_ a string or number representing the lower portion of the range expression.
 
-      - `Clause.prototype.between()`: sets the operator to `between` (between two values).
+            - `upper`: _(required)_ a string or number representing the upper portion of the range expression.
 
-      - `Clause.prototype.nbetween()`: sets the operator to `nbetween` (not between two values).
-    
-    __Children__
+      + __Search__
 
-      - `Clause.prototype.rante(lower, upper)`: a range of values that the value of subject should fall between.
+        - `Clause.prototype.like()`: sets the operator to `like` (like a string pattern)
 
-        _Parameters_
+        - `Clause.prototype.nlike()`: sets the operator to `nlike` (not like a string pattern)
 
-          - `lower`: _(required)_ a string or number representing the lower portion of the range expression.
+      __Children__
 
-          - `upper`: _(required)_ a string or number representing the upper portion of the range expression.
-
-    + __Search__
-
-      - `Clause.prototype.like()`: sets the operator to `like` (like a string pattern)
-
-      - `Clause.prototype.nlike()`: sets the operator to `nlike` (not like a string pattern)
-
-    __Children__
-
-      - 
+        - `Cluase.prototype.pattern()`
 
 #### Class: `Filter`
 
