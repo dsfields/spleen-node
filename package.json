@@ -4,7 +4,7 @@
   "description": "Filter expression parsing, formatting, and abstractions for Node.js.",
   "version": "1.0.0",
   "dependencies": {
-    "elv": "^1.0.1"
+    "elv": "^1.0.0"
   },
   "devDependencies": {
     "chai": "~3.5.0",
