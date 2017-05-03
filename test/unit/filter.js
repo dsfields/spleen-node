@@ -983,7 +983,7 @@ describe('Filter', () => {
       assert.isFalse(result);
     });
 
-    it('should be fale on {false&true}', () => {
+    it('should be false on {false&true}', () => {
       const result = Filter
         .where(false01)
         .and(true01)

@@ -37,27 +37,6 @@ describe('Range', () => {
   });
 
 
-  describe('#parse', () => {
-    it('should throw if invalid range', () => {
-      assert.throws(() => {
-        Range.parse('asdf');
-      }, errors.ParserError);
-    });
-
-    it('should set lower and upper', () => {
-      const range = Range.parse('24,42');
-      assert.strictEqual(range.lower, 24);
-      assert.strictEqual(range.upper, 42);
-    });
-
-    it('should set lower to upper if upper is less than lower', () => {
-      const range = Range.parse('24,42');
-      assert.strictEqual(range.lower, 24);
-      assert.strictEqual(range.upper, 42);
-    });
-  });
-
-
   describe('#between', () => {
     it('should throw if value not string or number', () => {
       assert.throws(() => {

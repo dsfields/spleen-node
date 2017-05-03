@@ -1,8 +1,8 @@
 # spleen
 
-Representing filter expressions across application layers is a pretty common problem.  Say we have a REST endpoint that accepts a filter, which is then deserialized, passed to your domain logic for process, and then passed into you data access layer for querying information.  There are a couple of issues that come out of this scenario.  How is the filter expression formatted when it's passed in via an HTTP request?  How do we pass this expression to our domain logic and data access layers without leaking implementation details?  The `spleen` module seeks to solve these issues.
+Representing filter expressions across application layers is a pretty common problem.  Say we have a REST endpoint that accepts a filter, which is then deserialized, passed to your domain logic for processing, and then passed into your data access layer for querying information.  There are a couple of issues that come out of this scenario.  How is the filter expression formatted when it's passed in via an HTTP request?  How do we pass this expression to our domain logic and data access layers without leaking implementation details?  The `spleen` module seeks to solve these issues.
 
-There are a number of competing methods for solving this issue.  Most notably GraphQL and OData.  However, these tools are not suitable for all use cases.  The `spleen` module is ideally suited for RESTful and intent-based API designs.
+There are a number of competing methods for solving this issue.  Most notably GraphQL and OData.  However, these tools are not suitable for all use cases.  The `spleen` module is ideally suited for RESTful and intent-based API designs, and requires minimal effort to implement.
 
 __Contents__
 
@@ -32,23 +32,42 @@ You can then parse `spleen` filter expression strings:
 
 ```js
 const spleen = require('spleen');
-const Filter = spleen.Filter;
 
 const expression = '/foo eq "bar" and /baz gt 42';
 
-const filter = Filter.parse(expression);
+const filter = spleen.parse(expression);
 ```
 
 Or define filter graphs directly (which is more efficient from a runtime perspective):
 
 ```js
 const spleen = require('spleen');
-const Filter = filtering.Filter;
-const Operator = filtering.Operator;
-const Target = filtering.Target;
 
-const filter = Filter.where(Target.jsonPointer('/foo'), Operator.eq, 'bar')
-                     .and(Target.jsonPointer('/baz'), Operator.gt, 42);
+const Clause = filtering.Clause;
+const Filter = spleen.Filter;
+
+const filter = Filter
+  .where(
+    Clause
+      .target('/foo')
+      .eq()
+      .target('/bar')
+  )
+  .and(
+    Clause
+      .target('/baz')
+      .gt()
+      .literal(42)
+  );
+
+const src = {
+  foo: 'a',
+  bar: 'a',
+  baz: 100
+};
+
+const match = filter.match(src);
+console.log(match); // true
 ```
 
 ## Spleen Expressions
@@ -184,7 +203,7 @@ The following is a list of all possible values for the various types of terms us
 
     + `"%match_pattern%"`: a set of characters and wildcards used for matching string patterns.  Wildcards include:
 
-      - `%`: match zero or more of any character.
+      - `*`: match zero or more of any character.  Most like pattern formats use a `%` for this purpose.  The `spleen` module uses `*` to be more URL-friendly.
 
       - `_`: match one of any character.
 
@@ -209,7 +228,7 @@ Field `bar` of field `foo` is not equal to string literal `"baz"`, and field `qu
 The conditions field `bar` of field `foo` is not equal to string literal `"baz"` and field `qux` is greater than or equal to 42 must be true, or the field `quux` must start with `"Hello"`.
 
 ```
-(/foo/bar neq "baz" and /qux gte 42) or /quux like "Hello%"
+(/foo/bar neq "baz" and /qux gte 42) or /quux like "Hello*"
 ```
 
 The value of field `foo` should not be in the array of values `42`, `"bar"`, and `"baz"`.
@@ -233,7 +252,7 @@ The value of field `foo` is greater than or equal to `0` or less than or equal t
 The primary use case for `spleen` expressions is to accept a filter condition from an external source.  For example, as a query parameter on a request to a REST-based API:
 
 ```
-GET api/v1/organizations?filter=/customerId+eq+"123"+and+/name+like+"%25awesome%25"
+GET api/v1/organizations?filter=/customerId+eq+"123"+and+/name+like+"*awesome*"
 ```
 
 ## Building Filters
@@ -247,29 +266,34 @@ const Operator = spleen.Operator;
 const Range = spleen.Range;
 const Target = spleen.Target;
 
-const filter = Filter.where(
-    Target.jsonPointer('/foo'),
-    Operator.eq,
-    'bar'
+const filter = Filter
+  .where(
+    Clause
+      .target('/foo')
+      .eq()
+      .literal('bar)
   )
   .and(
-    Target.jsonPointer('/baz'),
-    Operator.between,
-    Range.from('a', 'm')
-  );
-
-const isNot42 = Filter.where(
-    Target.jsonPointer('/qux'),
-    Operator.neq,
-    42
+    Clause
+      .target('/baz')
+      .between()
+      .range('a', 'm')
   )
-  .or(
-    Target.jsonPointer('/quux'),
-    Operator.lt,
-    42
+  .andGroup(
+    Filter
+      .where(
+        Clause
+          .target('/qux')
+          .neq()
+          .literal(42)
+      )
+      .or(
+        Clause
+          .target('/quux')
+          .lt()
+          .literal(42)
+      )
   );
-
-filter.andGroup(isNot42);
 ```
 
 ## API
@@ -280,17 +304,129 @@ The primary interface exposes all of the classes needed to build `spleen` filter
 
   * __Properties__
 
+    + `spleen.Clause` gets a reference to the [`Clause`](#class-clause) class.
+
     + `spleen.errors`: gets an object with references to all error types thrown by the module:
+
+      - `MatchError`: an error thrown when `match()` is called on an invalid `Filter`.  Generally, this should never happen.
 
       - `ParserError`: an error thrown when a `spleen` expression string cannot be parsed.  This error's `data` property is the numeric index of the invalid token encountered by the parser.
 
     + `spleen.Filter`: gets a reference to the [`Filter`](#class-filter) class.
 
-    + `spleen.Operator`: gets a reference to the [`Operator`](#class-operator) class.
+    + `spleen.Like`: gets a reference to the [`Like`](#class-like) class.
+
+    + `spleen.parse(value)` parses a string into an instance of `Filter`.  This method takes a single string argument which represents the filter.  If the filter is invalid, a `ParseError` is thrown.
 
     + `spleen.Range`: gets a reference to the [`Range`](#class-range) class.
 
     + `spleen.Target`: gets a reference to the [`Target`](class-target) class.
+
+#### Class: `Clause`
+
+Represents a single Boolean expression.  An instance of `Clause` is built using the methods described below, and can only be usable within a `Filter` once they are complete, valid expressions.  Meaning, they must have a subject, verb, and object (as described in "[Grammar](#grammar)").
+
+  * __Properties__
+
+    + `subject`: gets the subject value for the `Clause`.  This will always be either an instance of `Target`, a string, number, or Boolean.
+
+    + `operator`: gets the verb portion of the `Clause`.  This is an operator which is an object with the key `type`.  The `type` property can have a value of `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `between`, `nbetween`, `like`, or `nlike`.
+
+    + `object`: the object portion of the `Clause`.  The possible values for this property are constrained by the value of `operator`.
+
+      - If `operator` is `eq`, `neq`, `gt`, `gte`, `lt`, or `lte`, then `object` can be an instance of `Target`, a string, number, or Boolean.
+
+      - If `operator` is `in` or `nin`, then `object` can be an array of strings, numbers, and Booleans.
+
+      - If `operator` is `between` or `nbetween` then `object` can be an instance of `Range`.
+
+      - If `operator` is `like` or `nlike` then `object` can be an instance of `Like`.
+
+  * __Methods__
+
+  Many of the methods for `Clause` only become available after a certain method has been called.  All instances of `Clause` are constructed using one of its factory methods:
+
+    + `Clause.target(value)`: sets the subject of the `Clause` to an instance of `Target`.
+
+      _Parameters_
+
+        - `value`: _(required)_ a JSON-pointer string.
+    
+    + `Clause.literal(value)` sets the subject of the `Clause` to a literal.
+
+      _Parameters_
+
+        - `value`: _(required)_ a string, number, or Boolean value.
+  
+  Once the `subject` of the `Clause` has been set, available methods begin branching.  Calling one method itself unavailable, while also enabling methods in the following fashion:
+
+    + __Comparison__
+
+      - `Clause.prototype.eq()`: sets the operator to `eq` (equal to).
+
+      - `Clause.prototype.neq()`: sets the operator to `neq` (not equal to).
+
+      - `Clause.prototype.gt()`: sets the operator to `gt` (greater than).
+
+      - `Clause.prototype.gte()`: sets the operator to `gt` (greater than or equal to).
+
+      - `Clause.prototype.lt()`: sets the operator to `lt` (less than).
+
+      - `Clause.prototype.lte()`: sets the operator to `lte` (less than or equal to).
+
+    __Children__
+
+      - `Clause.prototype.target(value)`: ets the object of the `Clause` to an instance of `Target`.
+
+        _Parameters_
+
+          - `value`: _(required)_ a JSON-pointer string.
+      
+      - `Clause.prototype.literal(value)`: sets the object of the `Clause` to a literal.
+
+        _Parameters_
+
+          - `value`: _(required)_ a string, number, or Boolean value.
+
+    + __Array__
+
+      - `Clause.prototype.in()`: sets the operator to `in` (in array).
+
+      - `Clause.prototype.nin()`: sets the operator to `nin` (not in array).
+    
+    __Children__
+
+      - `Clause.prototype.array(value)`: sets the `object` of the `Clause` to an array.
+
+        _Parameters_
+
+          - `value`: _(required)_ an array of strings, numbers, and Booleans.
+
+    + __Range__
+
+      - `Clause.prototype.between()`: sets the operator to `between` (between two values).
+
+      - `Clause.prototype.nbetween()`: sets the operator to `nbetween` (not between two values).
+    
+    __Children__
+
+      - `Clause.prototype.rante(lower, upper)`: a range of values that the value of subject should fall between.
+
+        _Parameters_
+
+          - `lower`: _(required)_ a string or number representing the lower portion of the range expression.
+
+          - `upper`: _(required)_ a string or number representing the upper portion of the range expression.
+
+    + __Search__
+
+      - `Clause.prototype.like()`: sets the operator to `like` (like a string pattern)
+
+      - `Clause.prototype.nlike()`: sets the operator to `nlike` (not like a string pattern)
+
+    __Children__
+
+      - 
 
 #### Class: `Filter`
 
@@ -298,11 +434,13 @@ Represents the graph structure of a `spleen` filter.
 
   * __Properties__
 
-    + `Filter.prototype.params`: gets an array of all unique literal values in the order they are encountered.
-
     + `Filter.prototype.fields`: gets an array of all field references used in the filter.
 
-    + `Filter.prototype.value`: gets the graph of filter criteria.
+    + `Filter.prototype.statements`: gets an array of all nodes within the filter graph.  Each entry is an object that consists of the keys:
+
+      - `conjunctive`: a string that specifies how a statement is conjoined with the previous statement.  This can be either an empty string, `and`, or `or`.
+
+      - `value`: the value of the statement.  This can be either an instance of `Clause` or `Filter`.  If `value` is an instance of `Filter` then the statement is interpreted as a group.
 
   * __Methods__
 
@@ -411,46 +549,6 @@ Represents the graph structure of a `spleen` filter.
         - `urlEncode`: _(optional)_ a Boolean indicating whether or not the string should be URL encode.
 
       This method returns a string.
-
-#### Class: `Operator`
-
-A comparison operator (verb) in a filter condition.
-
-  * __Properties__
-
-    + `Operator.eq`: gets an instance of `Operator` representing an equal to comparison.
-
-    + `Operator.neq`: gets an instance of `Operator` representing a not equal to comparison.
-
-    + `Operator.gt`: gets an instance of `Operator` representing a greater than comparison.
-
-    + `Operator.gte`: gets an instance of `Operator` representing a greater than or equal to comparison.
-
-    + `Operator.lt`: gets an instance of `Operator` representing an less than comparison.
-
-    + `Operator.lte`: gets an instance of `Operator` representing a less than or equal to comparison.
-
-    + `Operator.between`: gets an instance of `Operator` representing a between comparison.
-
-    + `Operator.nbetween`: gets an instance of `Operator` representing a not between comparison.
-
-    + `Operator.like`: gets an instance of `Operator` representing a string like comparison.
-
-    + `Operator.nlike`: gets an instance of `Operator` representing a not string like comparison.
-
-    + `Operator.in`: gets an instance of `Operator` representing an in array comparison.
-
-    + `Operator.nin`: gets an instance of `Operator` representing a not in array comparison.
-
-  * __Methods__
-
-    + `Operator.parse(term)`: parses a string value it's `Operator` class instance representation.
-
-      _Parameters_
-
-        + `term`: _(required)_ the string to parse.
-
-      This method returns an instance of `Operator`.
 
 #### Class: `Range`
 

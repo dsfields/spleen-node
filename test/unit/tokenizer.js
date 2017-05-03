@@ -4,14 +4,53 @@ const assert = require('chai').assert;
 
 const errors = require('../../lib/errors');
 const Tokenizer = require('../../lib/tokenizer');
-const TokenType = require('../../lib/token-type');
+const Token = require('../../lib/token');
 
 
 describe('Tokenizer', () => {
 
+  describe('#constructor', () => {
+    it('should throw if value not string', () => {
+      assert.throws(() => {
+        const tokenizer = new Tokenizer(42);
+        assert.isNotOk(tokenizer);
+      }, TypeError);
+    });
+
+    it('should throw if value empty string', () => {
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('');
+        assert.isNotOk(tokenizer);
+      }, TypeError);
+    });
+  });
+
+
+  describe('#isStart', () => {
+    it('should be true if the tokenizer has not been advanced', () => {
+      const tokenizer = new Tokenizer('/foo eq /bar');
+      assert.isTrue(tokenizer.isStart);
+    });
+
+    it('should be false if tokenizer has been advanced', () => {
+      const tokenizer = new Tokenizer('/foo eq /bar');
+      tokenizer.next();
+      assert.isFalse(tokenizer.isStart);
+    });
+
+    it('should be false if tokenizer has been advanced on 1 char value', () => {
+      const tokenizer = new Tokenizer('0');
+      tokenizer.next();
+      assert.isFalse(tokenizer.isStart);
+    });
+  });
+  
+
   describe('#isEnd', () => {
     it('should return true if cursor at or past length', () => {
-      const tokenizer = new Tokenizer('');
+      const tokenizer = new Tokenizer('eq');
+      tokenizer.next();
+      tokenizer.next();
       assert.isTrue(tokenizer.isEnd);
     });
 
@@ -26,7 +65,7 @@ describe('Tokenizer', () => {
     it('should ignore \\ when escaping', () => {
       const tokenizer = new Tokenizer('\\\\asdf');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, '\\asdf');
     });
 
@@ -46,7 +85,7 @@ describe('Tokenizer', () => {
     it('should set token to string literal on ""', () => {
       const tokenizer = new Tokenizer('"asdf"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.string);
+      assert.strictEqual(tokenizer.current.type, Token.string);
     });
 
     it('should set value to string when encountering string literal', () => {
@@ -72,7 +111,7 @@ describe('Tokenizer', () => {
     it('should ignore " when escaping in string', () => {
       const tokenizer = new Tokenizer('"as\\"df"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.string);
+      assert.strictEqual(tokenizer.current.type, Token.string);
       assert.strictEqual(tokenizer.current.value, 'as"df');
     });
 
@@ -92,20 +131,20 @@ describe('Tokenizer', () => {
     it('should terminate token when encountering white space', () => {
       const tokenizer = new Tokenizer('eq and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should ignore extra white space', () => {
       const tokenizer = new Tokenizer('eq  \t\n\r\vand');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should open target token when encountering /', () => {
       const tokenizer = new Tokenizer('/foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
     });
 
     it('should set target token to proceding value', () => {
@@ -117,14 +156,14 @@ describe('Tokenizer', () => {
     it('should include / in string literals', () => {
       const tokenizer = new Tokenizer('"/foo"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.string);
+      assert.strictEqual(tokenizer.current.type, Token.string);
       assert.strictEqual(tokenizer.current.value, '/foo');
     });
 
     it('should ignore / when escaping', () => {
       const tokenizer = new Tokenizer('\\/eq');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, '/eq');
     });
 
@@ -138,145 +177,145 @@ describe('Tokenizer', () => {
     it('should ignore ( if escaping', () => {
       const tokenizer = new Tokenizer('\\(eq');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, '(eq');
     });
 
     it('should include ( in string literals', () => {
       const tokenizer = new Tokenizer('"as(df"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.string);
+      assert.strictEqual(tokenizer.current.type, Token.string);
       assert.strictEqual(tokenizer.current.value, 'as(df');
     });
 
     it('should terminate token on (', () => {
       const tokenizer = new Tokenizer('eq(');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should set token to open group on (', () => {
       const tokenizer = new Tokenizer('(');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.openGroup);
+      assert.strictEqual(tokenizer.current.type, Token.openGroup);
     });
 
     it('should ingore ) when escaping', () => {
       const tokenizer = new Tokenizer('\\)eq');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, ')eq');
     });
 
     it('should include ) when nested in string literal', () => {
       const tokenizer = new Tokenizer('"as)df"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.string);
+      assert.strictEqual(tokenizer.current.type, Token.string);
       assert.strictEqual(tokenizer.current.value, 'as)df');
     });
 
     it('should set token to close group on ) if not in token', () => {
       const tokenizer = new Tokenizer(')and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.closeGroup);
+      assert.strictEqual(tokenizer.current.type, Token.closeGroup);
     });
 
     it('should terminate token on )', () => {
       const tokenizer = new Tokenizer('eq)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should ignore , if escaping', () => {
       const tokenizer = new Tokenizer('\\,eq');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, ',eq');
     });
 
     it('should included , nested in string linteral', () => {
       const tokenizer = new Tokenizer('"as,df"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.string);
+      assert.strictEqual(tokenizer.current.type, Token.string);
       assert.strictEqual(tokenizer.current.value, 'as,df');
     });
 
     it('should set token to list delimiter on ,', () => {
       const tokenizer = new Tokenizer(',');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.listDelimiter);
+      assert.strictEqual(tokenizer.current.type, Token.listDelimiter);
     });
 
     it('should terminate token on ,', () => {
       const tokenizer = new Tokenizer('eq,');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should ignore [ when escaping', () => {
       const tokenizer = new Tokenizer('\\[eq');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, '[eq');
     });
 
     it('should include [ when nested in string literal', () => {
       const tokenizer = new Tokenizer('"as[df"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.string);
+      assert.strictEqual(tokenizer.current.type, Token.string);
       assert.strictEqual(tokenizer.current.value, 'as[df');
     });
 
     it('should set token to open array on [', () => {
       const tokenizer = new Tokenizer('[123');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.openArray);
+      assert.strictEqual(tokenizer.current.type, Token.openArray);
     });
 
     it('should terminate token on [', () => {
       const tokenizer = new Tokenizer('eq[123');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should ignore ] if escaping', () => {
       const tokenizer = new Tokenizer('\\[123');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, '[123');
     });
 
     it('should include ] when nested in string literal', () => {
       const tokenizer = new Tokenizer('"as]df"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.string);
+      assert.strictEqual(tokenizer.current.type, Token.string);
       assert.strictEqual(tokenizer.current.value, 'as]df');
     });
 
     it('should set token to close array on ]', () => {
       const tokenizer = new Tokenizer(']');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.closeArray);
+      assert.strictEqual(tokenizer.current.type, Token.closeArray);
     });
 
     it('should terminate token on ]', () => {
       const tokenizer = new Tokenizer('true] and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
     it('should parse Boolean token on true', () => {
       const tokenizer = new Tokenizer('true');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
     it('should parse true terminated by white space', () => {
       const tokenizer = new Tokenizer('true and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -290,42 +329,42 @@ describe('Tokenizer', () => {
     it('should parse true terminated by (', () => {
       const tokenizer = new Tokenizer('true(asdf');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
     it('should parse true terminated by )', () => {
       const tokenizer = new Tokenizer('true) and ');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
     it('should parse true terminated by ,', () => {
       const tokenizer = new Tokenizer('true,123]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
     it('should parse true terminated by [', () => {
       const tokenizer = new Tokenizer('true[123');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
     it('should parse true terminated by ]', () => {
       const tokenizer = new Tokenizer('true] and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
     it('should parse true preceded by white space', () => {
       const tokenizer = new Tokenizer(' \u0085\u2004true] and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -333,7 +372,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('(true');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -341,7 +380,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(')true');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -349,7 +388,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(',true');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -357,7 +396,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('[true');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -365,7 +404,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(']true');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -374,7 +413,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -392,7 +431,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -401,7 +440,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -411,7 +450,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -420,7 +459,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -432,7 +471,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -441,7 +480,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -451,7 +490,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -462,7 +501,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -473,7 +512,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -485,7 +524,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -495,7 +534,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
@@ -507,21 +546,21 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, true);
     });
 
     it('should parse Boolean token on false', () => {
       const tokenizer = new Tokenizer('false');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
     it('should parse false terminated by white space', () => {
       const tokenizer = new Tokenizer('false and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -535,42 +574,42 @@ describe('Tokenizer', () => {
     it('should parse false terminated by (', () => {
       const tokenizer = new Tokenizer('false(asdf');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
     it('should parse false terminated by )', () => {
       const tokenizer = new Tokenizer('false) and ');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
     it('should parse false terminated by ,', () => {
       const tokenizer = new Tokenizer('false,123]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
     it('should parse false terminated by [', () => {
       const tokenizer = new Tokenizer('false[123');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
     it('should parse false terminated by ]', () => {
       const tokenizer = new Tokenizer('false] and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
     it('should parse false preceded by white space', () => {
       const tokenizer = new Tokenizer(' \u0085\u2004false] and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -578,7 +617,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('(false');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -586,7 +625,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(')false');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -594,7 +633,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(',false');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -602,7 +641,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('[false');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -610,7 +649,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(']false');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -619,7 +658,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -637,7 +676,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -646,7 +685,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -656,7 +695,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -665,7 +704,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -677,7 +716,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -686,7 +725,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -696,7 +735,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -707,7 +746,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -718,7 +757,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -730,7 +769,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -740,7 +779,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
@@ -752,20 +791,20 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.boolean);
+      assert.strictEqual(tokenizer.current.type, Token.boolean);
       assert.strictEqual(tokenizer.current.value, false);
     });
 
     it('should parse and token', () => {
       const tokenizer = new Tokenizer('and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse and terminated by white space', () => {
       const tokenizer = new Tokenizer('and /blah');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should set error when parsing and terminated by "', () => {
@@ -785,72 +824,72 @@ describe('Tokenizer', () => {
     it('should parse and terminated by (', () => {
       const tokenizer = new Tokenizer('and(/test');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse and terminated by )', () => {
       const tokenizer = new Tokenizer('and) /test');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse and terminated by ,', () => {
       const tokenizer = new Tokenizer('and) /test');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse and terminated by [', () => {
       const tokenizer = new Tokenizer('and[ /test');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse and terminated by ]', () => {
       const tokenizer = new Tokenizer('and] /test');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse and preceded by white space', () => {
       const tokenizer = new Tokenizer(' \u205Fand /test');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse and preceded by (', () => {
       const tokenizer = new Tokenizer('(and /test');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse and preceded by )', () => {
       const tokenizer = new Tokenizer(')and /test');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse and preceded by ,', () => {
       const tokenizer = new Tokenizer(',and /test');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse and preceded by [', () => {
       const tokenizer = new Tokenizer('[and /test');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse and preceded by ]', () => {
       const tokenizer = new Tokenizer(']and /test');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse downstream and terminated by white space', () => {
@@ -859,7 +898,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should set error when parsing and terminated by "', () => {
@@ -888,7 +927,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse downstream and terminated by )', () => {
@@ -897,7 +936,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse downstream and terminated by ,', () => {
@@ -906,7 +945,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse downstream and terminated by [', () => {
@@ -915,7 +954,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse downstream and terminated by ]', () => {
@@ -924,7 +963,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse downstream and preceded by "', () => {
@@ -933,7 +972,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse downstream and preceded by (', () => {
@@ -943,7 +982,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse downstream and preceded by )', () => {
@@ -953,7 +992,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse downstream and preceded by ,', () => {
@@ -963,7 +1002,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse downstream and preceded by [', () => {
@@ -973,7 +1012,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse downstream and preceded by ]', () => {
@@ -983,19 +1022,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.and);
+      assert.strictEqual(tokenizer.current.type, Token.and);
     });
 
     it('should parse or token', () => {
       const tokenizer = new Tokenizer('or');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse or terminated by white space', () => {
       const tokenizer = new Tokenizer('or /blah');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should set error when parsing or terminated by "', () => {
@@ -1015,72 +1054,72 @@ describe('Tokenizer', () => {
     it('should parse or terminated by (', () => {
       const tokenizer = new Tokenizer('or(/test');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse or terminated by )', () => {
       const tokenizer = new Tokenizer('or) /test');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse or terminated by ,', () => {
       const tokenizer = new Tokenizer('or) /test');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse or terminated by [', () => {
       const tokenizer = new Tokenizer('or[ /test');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse or terminated by ]', () => {
       const tokenizer = new Tokenizer('or] /test');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse or preceded by white space', () => {
       const tokenizer = new Tokenizer(' \u205For /test');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse or preceded by (', () => {
       const tokenizer = new Tokenizer('(or /test');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse or preceded by )', () => {
       const tokenizer = new Tokenizer(')or /test');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse or preceded by ,', () => {
       const tokenizer = new Tokenizer(',or /test');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse or preceded by [', () => {
       const tokenizer = new Tokenizer('[or /test');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse or preceded by ]', () => {
       const tokenizer = new Tokenizer(']or /test');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse downstream or terminated by white space', () => {
@@ -1089,7 +1128,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should set error when parsing or terminated by "', () => {
@@ -1118,7 +1157,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse downstream or terminated by )', () => {
@@ -1127,7 +1166,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse downstream or terminated by ,', () => {
@@ -1136,7 +1175,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse downstream or terminated by [', () => {
@@ -1145,7 +1184,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse downstream or terminated by ]', () => {
@@ -1154,7 +1193,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse downstream or preceded by "', () => {
@@ -1163,7 +1202,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse downstream or preceded by (', () => {
@@ -1173,7 +1212,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse downstream or preceded by )', () => {
@@ -1183,7 +1222,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse downstream or preceded by ,', () => {
@@ -1193,7 +1232,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse downstream or preceded by [', () => {
@@ -1203,7 +1242,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse downstream or preceded by ]', () => {
@@ -1213,19 +1252,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.or);
+      assert.strictEqual(tokenizer.current.type, Token.or);
     });
 
     it('should parse eq token', () => {
       const tokenizer = new Tokenizer('eq');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse eq terminated by white space', () => {
       const tokenizer = new Tokenizer('eq\uFEFF42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should set error parsing eq terminated by "', () => {
@@ -1245,79 +1284,79 @@ describe('Tokenizer', () => {
     it('should parse eq terminated by (', () => {
       const tokenizer = new Tokenizer('eq(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse eq terminated by )', () => {
       const tokenizer = new Tokenizer('eq) and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse eq terminated by ,', () => {
       const tokenizer = new Tokenizer('eq,true');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse eq terminated by [', () => {
       const tokenizer = new Tokenizer('eq[42,24]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse eq terminated by ]', () => {
       const tokenizer = new Tokenizer('eq]42,24]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse eq preceded by white space', () => {
       const tokenizer = new Tokenizer('\u3000\u200Aeq 42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse eq preceded by "', () => {
       const tokenizer = new Tokenizer('"test"eq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse eq preceded by (', () => {
       const tokenizer = new Tokenizer('(eq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse eq preceded by )', () => {
       const tokenizer = new Tokenizer(')eq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse eq preceded by ,', () => {
       const tokenizer = new Tokenizer(',eq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse eq preceded by [', () => {
       const tokenizer = new Tokenizer('[eq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse eq preceded by ]', () => {
       const tokenizer = new Tokenizer(']eq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse downstream eq terminated by white space', () => {
@@ -1325,12 +1364,12 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should set error parsing downstream eq terminated by "', () => {
@@ -1356,7 +1395,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse downstream eq terminated by )', () => {
@@ -1364,7 +1403,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse downstream eq terminated by ,', () => {
@@ -1372,7 +1411,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse downstream eq terminated by [', () => {
@@ -1380,7 +1419,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse downstream eq terminated by ]', () => {
@@ -1388,7 +1427,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse downstream eq preceded by white space', () => {
@@ -1396,14 +1435,14 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse downstream eq preceded by "', () => {
       const tokenizer = new Tokenizer('"test"eq /foo/bar');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse downstream eq preceded by (', () => {
@@ -1415,7 +1454,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse downstream eq preceded by )', () => {
@@ -1427,7 +1466,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse downstream eq preceded by ,', () => {
@@ -1439,7 +1478,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse downstream eq preceded by [', () => {
@@ -1451,7 +1490,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse downstream eq preceded by ]', () => {
@@ -1463,19 +1502,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.eq);
+      assert.strictEqual(tokenizer.current.type, Token.eq);
     });
 
     it('should parse neq token', () => {
       const tokenizer = new Tokenizer('neq');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse neq terminated by white space', () => {
       const tokenizer = new Tokenizer('neq\uFEFF42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should set error parsing neq terminated by "', () => {
@@ -1495,79 +1534,79 @@ describe('Tokenizer', () => {
     it('should parse neq terminated by (', () => {
       const tokenizer = new Tokenizer('neq(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse neq terminated by )', () => {
       const tokenizer = new Tokenizer('neq) and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse neq terminated by ,', () => {
       const tokenizer = new Tokenizer('neq,true');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse neq terminated by [', () => {
       const tokenizer = new Tokenizer('neq[42,24]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse neq terminated by ]', () => {
       const tokenizer = new Tokenizer('neq]42,24]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse neq preceded by white space', () => {
       const tokenizer = new Tokenizer('\u3000\u200Aneq 42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse neq preceded by "', () => {
       const tokenizer = new Tokenizer('"test"neq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse neq preceded by (', () => {
       const tokenizer = new Tokenizer('(neq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse neq preceded by )', () => {
       const tokenizer = new Tokenizer(')neq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse neq preceded by ,', () => {
       const tokenizer = new Tokenizer(',neq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse neq preceded by [', () => {
       const tokenizer = new Tokenizer('[neq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse neq preceded by ]', () => {
       const tokenizer = new Tokenizer(']neq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse downstream neq terminated by white space', () => {
@@ -1575,12 +1614,12 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should set error parsing downstream neq terminated by "', () => {
@@ -1606,7 +1645,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse downstream neq terminated by )', () => {
@@ -1614,7 +1653,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse downstream neq terminated by ,', () => {
@@ -1622,7 +1661,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse downstream neq terminated by [', () => {
@@ -1630,7 +1669,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse downstream neq terminated by ]', () => {
@@ -1638,7 +1677,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse downstream neq preceded by white space', () => {
@@ -1646,14 +1685,14 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse downstream neq preceded by "', () => {
       const tokenizer = new Tokenizer('"test"neq /foo/bar');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse downstream neq preceded by (', () => {
@@ -1665,7 +1704,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse downstream neq preceded by )', () => {
@@ -1677,7 +1716,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse downstream neq preceded by ,', () => {
@@ -1689,7 +1728,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse downstream neq preceded by [', () => {
@@ -1701,7 +1740,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse downstream neq preceded by ]', () => {
@@ -1713,19 +1752,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.neq);
+      assert.strictEqual(tokenizer.current.type, Token.neq);
     });
 
     it('should parse gt token', () => {
       const tokenizer = new Tokenizer('gt');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gt terminated by white space', () => {
       const tokenizer = new Tokenizer('gt\uFEFF42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should set error parsing gt terminated by "', () => {
@@ -1745,79 +1784,79 @@ describe('Tokenizer', () => {
     it('should parse gt terminated by (', () => {
       const tokenizer = new Tokenizer('gt(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gt terminated by )', () => {
       const tokenizer = new Tokenizer('gt) and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gt terminated by ,', () => {
       const tokenizer = new Tokenizer('gt,true');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gt terminated by [', () => {
       const tokenizer = new Tokenizer('gt[42,24]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gt terminated by ]', () => {
       const tokenizer = new Tokenizer('gt]42,24]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gt preceded by white space', () => {
       const tokenizer = new Tokenizer('\u3000\u200Agt 42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gt preceded by "', () => {
       const tokenizer = new Tokenizer('"test"gt 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gt preceded by (', () => {
       const tokenizer = new Tokenizer('(gt 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gt preceded by )', () => {
       const tokenizer = new Tokenizer(')gt 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gt preceded by ,', () => {
       const tokenizer = new Tokenizer(',gt 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gt preceded by [', () => {
       const tokenizer = new Tokenizer('[gt 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gt preceded by ]', () => {
       const tokenizer = new Tokenizer(']gt 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse downstream gt terminated by white space', () => {
@@ -1825,12 +1864,12 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should set error parsing downstream gt terminated by "', () => {
@@ -1856,7 +1895,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse downstream gt terminated by )', () => {
@@ -1864,7 +1903,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse downstream gt terminated by ,', () => {
@@ -1872,7 +1911,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse downstream gt terminated by [', () => {
@@ -1880,7 +1919,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse downstream gt terminated by ]', () => {
@@ -1888,7 +1927,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse downstream gt preceded by white space', () => {
@@ -1896,14 +1935,14 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse downstream gt preceded by "', () => {
       const tokenizer = new Tokenizer('"test"gt /foo/bar');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse downstream gt preceded by (', () => {
@@ -1915,7 +1954,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse downstream gt preceded by )', () => {
@@ -1927,7 +1966,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse downstream gt preceded by ,', () => {
@@ -1939,7 +1978,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse downstream gt preceded by [', () => {
@@ -1951,7 +1990,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse downstream gt preceded by ]', () => {
@@ -1963,19 +2002,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gt);
+      assert.strictEqual(tokenizer.current.type, Token.gt);
     });
 
     it('should parse gte token', () => {
       const tokenizer = new Tokenizer('gte');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse gte terminated by white space', () => {
       const tokenizer = new Tokenizer('gte\uFEFF42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should set error parsing gte terminated by "', () => {
@@ -1995,79 +2034,79 @@ describe('Tokenizer', () => {
     it('should parse gte terminated by (', () => {
       const tokenizer = new Tokenizer('gte(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse gte terminated by )', () => {
       const tokenizer = new Tokenizer('gte) and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse gte terminated by ,', () => {
       const tokenizer = new Tokenizer('gte,true');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse gte terminated by [', () => {
       const tokenizer = new Tokenizer('gte[42,24]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse gte terminated by ]', () => {
       const tokenizer = new Tokenizer('gte]42,24]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse gte preceded by white space', () => {
       const tokenizer = new Tokenizer('\u3000\u200Agte 42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse gte preceded by "', () => {
       const tokenizer = new Tokenizer('"test"gte 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse gte preceded by (', () => {
       const tokenizer = new Tokenizer('(gte 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse gte preceded by )', () => {
       const tokenizer = new Tokenizer(')gte 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse gte preceded by ,', () => {
       const tokenizer = new Tokenizer(',gte 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse gte preceded by [', () => {
       const tokenizer = new Tokenizer('[gte 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse gte preceded by ]', () => {
       const tokenizer = new Tokenizer(']gte 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse downstream gte terminated by white space', () => {
@@ -2075,12 +2114,12 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should set error parsing downstream gte terminated by "', () => {
@@ -2106,7 +2145,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse downstream gte terminated by )', () => {
@@ -2114,7 +2153,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse downstream gte terminated by ,', () => {
@@ -2122,7 +2161,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse downstream gte terminated by [', () => {
@@ -2130,7 +2169,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse downstream gte terminated by ]', () => {
@@ -2138,7 +2177,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse downstream gte preceded by white space', () => {
@@ -2146,14 +2185,14 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse downstream gte preceded by "', () => {
       const tokenizer = new Tokenizer('"test"gte /foo/bar');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse downstream gte preceded by (', () => {
@@ -2165,7 +2204,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse downstream gte preceded by )', () => {
@@ -2177,7 +2216,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse downstream gte preceded by ,', () => {
@@ -2189,7 +2228,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse downstream gte preceded by [', () => {
@@ -2201,7 +2240,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse downstream gte preceded by ]', () => {
@@ -2213,19 +2252,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.gte);
+      assert.strictEqual(tokenizer.current.type, Token.gte);
     });
 
     it('should parse lt token', () => {
       const tokenizer = new Tokenizer('lt');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lt terminated by white space', () => {
       const tokenizer = new Tokenizer('lt\uFEFF42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should set error parsing lt terminated by "', () => {
@@ -2245,79 +2284,79 @@ describe('Tokenizer', () => {
     it('should parse lt terminated by (', () => {
       const tokenizer = new Tokenizer('lt(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lt terminated by )', () => {
       const tokenizer = new Tokenizer('lt) and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lt terminated by ,', () => {
       const tokenizer = new Tokenizer('lt,true');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lt terminated by [', () => {
       const tokenizer = new Tokenizer('lt[42,24]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lt terminated by ]', () => {
       const tokenizer = new Tokenizer('lt]42,24]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lt preceded by white space', () => {
       const tokenizer = new Tokenizer('\u3000\u200Alt 42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lt preceded by "', () => {
       const tokenizer = new Tokenizer('"test"lt 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lt preceded by (', () => {
       const tokenizer = new Tokenizer('(lt 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lt preceded by )', () => {
       const tokenizer = new Tokenizer(')lt 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lt preceded by ,', () => {
       const tokenizer = new Tokenizer(',lt 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lt preceded by [', () => {
       const tokenizer = new Tokenizer('[lt 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lt preceded by ]', () => {
       const tokenizer = new Tokenizer(']lt 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse downstream lt terminated by white space', () => {
@@ -2325,12 +2364,12 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should set error parsing downstream lt terminated by "', () => {
@@ -2356,7 +2395,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse downstream lt terminated by )', () => {
@@ -2364,7 +2403,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse downstream lt terminated by ,', () => {
@@ -2372,7 +2411,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse downstream lt terminated by [', () => {
@@ -2380,7 +2419,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse downstream lt terminated by ]', () => {
@@ -2388,7 +2427,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse downstream lt preceded by white space', () => {
@@ -2396,14 +2435,14 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse downstream lt preceded by "', () => {
       const tokenizer = new Tokenizer('"test"lt /foo/bar');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse downstream lt preceded by (', () => {
@@ -2415,7 +2454,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse downstream lt preceded by )', () => {
@@ -2427,7 +2466,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse downstream lt preceded by ,', () => {
@@ -2439,7 +2478,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse downstream lt preceded by [', () => {
@@ -2451,7 +2490,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse downstream lt preceded by ]', () => {
@@ -2463,19 +2502,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lt);
+      assert.strictEqual(tokenizer.current.type, Token.lt);
     });
 
     it('should parse lte token', () => {
       const tokenizer = new Tokenizer('lte');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse lte terminated by white space', () => {
       const tokenizer = new Tokenizer('lte\uFEFF42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should set error parsing lte terminated by "', () => {
@@ -2495,79 +2534,79 @@ describe('Tokenizer', () => {
     it('should parse lte terminated by (', () => {
       const tokenizer = new Tokenizer('lte(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse lte terminated by )', () => {
       const tokenizer = new Tokenizer('lte) and');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse lte terminated by ,', () => {
       const tokenizer = new Tokenizer('lte,true');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse lte terminated by [', () => {
       const tokenizer = new Tokenizer('lte[42,24]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse lte terminated by ]', () => {
       const tokenizer = new Tokenizer('lte]42,24]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse lte preceded by white space', () => {
       const tokenizer = new Tokenizer('\u3000\u200Alte 42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse lte preceded by "', () => {
       const tokenizer = new Tokenizer('"test"lte 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse lte preceded by (', () => {
       const tokenizer = new Tokenizer('(lte 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse lte preceded by )', () => {
       const tokenizer = new Tokenizer(')lte 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse lte preceded by ,', () => {
       const tokenizer = new Tokenizer(',lte 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse lte preceded by [', () => {
       const tokenizer = new Tokenizer('[lte 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse lte preceded by ]', () => {
       const tokenizer = new Tokenizer(']lte 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse downstream lte terminated by white space', () => {
@@ -2575,12 +2614,12 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should set error parsing downstream lte terminated by "', () => {
@@ -2606,7 +2645,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse downstream lte terminated by )', () => {
@@ -2614,7 +2653,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse downstream lte terminated by ,', () => {
@@ -2622,7 +2661,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse downstream lte terminated by [', () => {
@@ -2630,7 +2669,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse downstream lte terminated by ]', () => {
@@ -2638,7 +2677,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse downstream lte preceded by white space', () => {
@@ -2646,14 +2685,14 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse downstream lte preceded by "', () => {
       const tokenizer = new Tokenizer('"test"lte /foo/bar');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse downstream lte preceded by (', () => {
@@ -2665,7 +2704,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse downstream lte preceded by )', () => {
@@ -2677,7 +2716,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse downstream lte preceded by ,', () => {
@@ -2689,7 +2728,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse downstream lte preceded by [', () => {
@@ -2701,7 +2740,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse downstream lte preceded by ]', () => {
@@ -2713,19 +2752,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.lte);
+      assert.strictEqual(tokenizer.current.type, Token.lte);
     });
 
     it('should parse in token', () => {
       const tokenizer = new Tokenizer('in');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse in terminated by white space', () => {
       const tokenizer = new Tokenizer('in\u2008 ');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should set error parsing in terminated by "', () => {
@@ -2745,79 +2784,79 @@ describe('Tokenizer', () => {
     it('should parse in terminated by (', () => {
       const tokenizer = new Tokenizer('in(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse in terminated by )', () => {
       const tokenizer = new Tokenizer('in)true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse in terminated by ,', () => {
       const tokenizer = new Tokenizer('in,true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse in terminated by [', () => {
       const tokenizer = new Tokenizer('in[42,"foo"]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse in terminated by ]', () => {
       const tokenizer = new Tokenizer('in]42,"foo"]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse in preceded by white space', () => {
       const tokenizer = new Tokenizer('\u200Cin [42,"foo"]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse in preceded by "', () => {
       const tokenizer = new Tokenizer('"foo"in [42,"foo"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse in preceded by (', () => {
       const tokenizer = new Tokenizer('(in [42,"foo"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse in preceded by )', () => {
       const tokenizer = new Tokenizer(')in [42,"foo"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse in preceded by ,', () => {
       const tokenizer = new Tokenizer(',in [42,"foo"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse in preceded by [', () => {
       const tokenizer = new Tokenizer('[in [42,"foo"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse in preceded by ]', () => {
       const tokenizer = new Tokenizer(']in [42,"foo"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse downstream in terminated by white space', () => {
@@ -2828,7 +2867,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should set error parsing downstream in terminated by "', () => {
@@ -2863,7 +2902,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse downstream in terminated by )', () => {
@@ -2874,7 +2913,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse downstream in terminated by ,', () => {
@@ -2885,7 +2924,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse downstream in terminated by [', () => {
@@ -2896,7 +2935,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse downstream in terminated by ]', () => {
@@ -2907,7 +2946,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse downstream in preceded by white space', () => {
@@ -2918,7 +2957,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse downstream in preceded by "', () => {
@@ -2929,7 +2968,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse downstream in preceded by (', () => {
@@ -2940,7 +2979,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse downstream in preceded by )', () => {
@@ -2951,7 +2990,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse downstream in preceded by ,', () => {
@@ -2962,7 +3001,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse downstream in preceded by [', () => {
@@ -2973,7 +3012,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse downstream in preceded by ]', () => {
@@ -2984,19 +3023,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.in);
+      assert.strictEqual(tokenizer.current.type, Token.in);
     });
 
     it('should parse nin token', () => {
       const tokenizer = new Tokenizer('nin');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse nin terminated by white space', () => {
       const tokenizer = new Tokenizer('nin\u2008 ');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should set error parsning nin terminated by "', () => {
@@ -3016,79 +3055,79 @@ describe('Tokenizer', () => {
     it('should parse nin terminated by (', () => {
       const tokenizer = new Tokenizer('nin(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse nin terminated by )', () => {
       const tokenizer = new Tokenizer('nin)true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse nin terminated by ,', () => {
       const tokenizer = new Tokenizer('nin,true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse nin terminated by [', () => {
       const tokenizer = new Tokenizer('nin[42,"foo"]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse nin terminated by ]', () => {
       const tokenizer = new Tokenizer('nin]42,"foo"]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse nin preceded by white space', () => {
       const tokenizer = new Tokenizer('\u200Cnin [42,"foo"]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse nin preceded by "', () => {
       const tokenizer = new Tokenizer('"foo"nin [42,"foo"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse nin preceded by (', () => {
       const tokenizer = new Tokenizer('(nin [42,"foo"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse nin preceded by )', () => {
       const tokenizer = new Tokenizer(')nin [42,"foo"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse nin preceded by ,', () => {
       const tokenizer = new Tokenizer(',nin [42,"foo"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse nin preceded by [', () => {
       const tokenizer = new Tokenizer('[nin [42,"foo"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse nin preceded by ]', () => {
       const tokenizer = new Tokenizer(']nin [42,"foo"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse downstream nin terminated by white space', () => {
@@ -3099,7 +3138,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should set error parsning downstream nin terminated by "', () => {
@@ -3134,7 +3173,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse downstream nin terminated by )', () => {
@@ -3145,7 +3184,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse downstream nin terminated by ,', () => {
@@ -3156,7 +3195,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse downstream nin terminated by [', () => {
@@ -3167,7 +3206,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse downstream nin terminated by ]', () => {
@@ -3178,7 +3217,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse downstream nin preceded by white space', () => {
@@ -3189,7 +3228,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse downstream nin preceded by "', () => {
@@ -3200,7 +3239,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse downstream nin preceded by (', () => {
@@ -3211,7 +3250,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse downstream nin preceded by )', () => {
@@ -3222,7 +3261,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse downstream nin preceded by ,', () => {
@@ -3233,7 +3272,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse downstream nin preceded by [', () => {
@@ -3244,7 +3283,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse downstream nin preceded by ]', () => {
@@ -3255,19 +3294,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nin);
+      assert.strictEqual(tokenizer.current.type, Token.nin);
     });
 
     it('should parse between token', () => {
       const tokenizer = new Tokenizer('between');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse between terminated by white space', () => {
       const tokenizer = new Tokenizer('between\0 24,42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should set error parsing between terminated by "', () => {
@@ -3287,79 +3326,79 @@ describe('Tokenizer', () => {
     it('should parse between terminated by (', () => {
       const tokenizer = new Tokenizer('between(24,42)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse between terminated by )', () => {
       const tokenizer = new Tokenizer('between)24,42)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse between terminated by ,', () => {
       const tokenizer = new Tokenizer('between,24,42)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse between terminated by [', () => {
       const tokenizer = new Tokenizer('between[24,42]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse between terminated by ]', () => {
       const tokenizer = new Tokenizer('between]24,42]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse between preceded by white space', () => {
       const tokenizer = new Tokenizer('\u200Bbetween 24,42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse between preceded by "', () => {
       const tokenizer = new Tokenizer('"test"between 24,42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse between preceded by (', () => {
       const tokenizer = new Tokenizer('(between 24,42)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse between preceded by )', () => {
       const tokenizer = new Tokenizer(')between 24,42)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse between preceded by ,', () => {
       const tokenizer = new Tokenizer(',between 24,42)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse between preceded by [', () => {
       const tokenizer = new Tokenizer('[between 24,42]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse between preceded by ]', () => {
       const tokenizer = new Tokenizer(']between 24,42]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse downstream between terminated by white space', () => {
@@ -3370,7 +3409,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should set error parsing downstream between terminated by "', () => {
@@ -3405,7 +3444,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse downstream between terminated by )', () => {
@@ -3416,7 +3455,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse downstream between terminated by ,', () => {
@@ -3427,7 +3466,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse downstream between terminated by [', () => {
@@ -3438,7 +3477,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse downstream between terminated by ]', () => {
@@ -3449,7 +3488,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse downstream between preceded by white space', () => {
@@ -3460,7 +3499,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse downstream between preceded by "', () => {
@@ -3471,7 +3510,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse downstream between preceded by (', () => {
@@ -3483,7 +3522,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse downstream between preceded by )', () => {
@@ -3496,7 +3535,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse downstream between preceded by ,', () => {
@@ -3508,7 +3547,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse downstream between preceded by [', () => {
@@ -3520,7 +3559,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse downstream between preceded by ]', () => {
@@ -3533,19 +3572,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.between);
+      assert.strictEqual(tokenizer.current.type, Token.between);
     });
 
     it('should parse nbetween token', () => {
       const tokenizer = new Tokenizer('nbetween');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse nbetween terminated by white space', () => {
       const tokenizer = new Tokenizer('nbetween\0 24,42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should set error parsing nbetween terminated by "', () => {
@@ -3565,79 +3604,79 @@ describe('Tokenizer', () => {
     it('should parse nbetween terminated by (', () => {
       const tokenizer = new Tokenizer('nbetween(24,42)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse nbetween terminated by )', () => {
       const tokenizer = new Tokenizer('nbetween)24,42)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse nbetween terminated by ,', () => {
       const tokenizer = new Tokenizer('nbetween,24,42)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse nbetween terminated by [', () => {
       const tokenizer = new Tokenizer('nbetween[24,42]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse nbetween terminated by ]', () => {
       const tokenizer = new Tokenizer('nbetween]24,42]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse nbetween preceded by white space', () => {
       const tokenizer = new Tokenizer('\u200Bnbetween 24,42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse nbetween preceded by "', () => {
       const tokenizer = new Tokenizer('"test"nbetween 24,42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse nbetween preceded by (', () => {
       const tokenizer = new Tokenizer('(nbetween 24,42)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse nbetween preceded by )', () => {
       const tokenizer = new Tokenizer(')nbetween 24,42)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse nbetween preceded by ,', () => {
       const tokenizer = new Tokenizer(',nbetween 24,42)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse nbetween preceded by [', () => {
       const tokenizer = new Tokenizer('[nbetween 24,42]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse nbetween preceded by ]', () => {
       const tokenizer = new Tokenizer(']nbetween 24,42]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse downstream nbetween terminated by white space', () => {
@@ -3648,7 +3687,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should set error parsing downstream nbetween terminated by "', () => {
@@ -3683,7 +3722,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse downstream nbetween terminated by )', () => {
@@ -3694,7 +3733,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse downstream nbetween terminated by ,', () => {
@@ -3705,7 +3744,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse downstream nbetween terminated by [', () => {
@@ -3716,7 +3755,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse downstream nbetween terminated by ]', () => {
@@ -3727,7 +3766,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse downstream nbetween preceded by white space', () => {
@@ -3738,7 +3777,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse downstream nbetween preceded by "', () => {
@@ -3749,7 +3788,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse downstream nbetween preceded by (', () => {
@@ -3761,7 +3800,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse downstream nbetween preceded by )', () => {
@@ -3774,7 +3813,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse downstream nbetween preceded by ,', () => {
@@ -3786,7 +3825,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse downstream nbetween preceded by [', () => {
@@ -3798,7 +3837,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse downstream nbetween preceded by ]', () => {
@@ -3811,19 +3850,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nbetween);
+      assert.strictEqual(tokenizer.current.type, Token.nbetween);
     });
 
     it('should parse like token', () => {
       const tokenizer = new Tokenizer('like');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse like terminated by white space', () => {
       const tokenizer = new Tokenizer('like\u2029"*blah"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should set error parsing like terminated by "', () => {
@@ -3843,72 +3882,72 @@ describe('Tokenizer', () => {
     it('should parse like terminated by (', () => {
       const tokenizer = new Tokenizer('like("*blah")');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse like terminated by )', () => {
       const tokenizer = new Tokenizer('like)"*blah")');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse like terminated by ,', () => {
       const tokenizer = new Tokenizer('like,"*blah"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse like terminated by [', () => {
       const tokenizer = new Tokenizer('like["*blah"]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse like terminated by ]', () => {
       const tokenizer = new Tokenizer('like]"*blah"]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse like preceded by white space', () => {
       const tokenizer = new Tokenizer('\u2009like "*blah"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse like preceded by "', () => {
       const tokenizer = new Tokenizer('"foobar"like "*bar"');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse like preceded by (', () => {
       const tokenizer = new Tokenizer('(like "*bar")');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse like preceded by )', () => {
       const tokenizer = new Tokenizer(')like "*bar")');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse like preceded by ,', () => {
       const tokenizer = new Tokenizer(',like "*bar"');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse like preceded by [', () => {
       const tokenizer = new Tokenizer('[like "*bar"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse like preceded by ]', () => {
@@ -3917,7 +3956,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse downstream like terminated by white space', () => {
@@ -3928,7 +3967,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should set error parsing downstream like terminated by "', () => {
@@ -3963,7 +4002,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse downstream like terminated by )', () => {
@@ -3974,7 +4013,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse downstream like terminated by ,', () => {
@@ -3985,7 +4024,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse downstream like terminated by [', () => {
@@ -3996,7 +4035,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse downstream like terminated by ]', () => {
@@ -4007,7 +4046,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse downstream like preceded by white space', () => {
@@ -4018,7 +4057,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse downstream like preceded by "', () => {
@@ -4029,7 +4068,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse downstream like preceded by (', () => {
@@ -4041,7 +4080,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse downstream like preceded by )', () => {
@@ -4053,7 +4092,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse downstream like preceded by ,', () => {
@@ -4065,7 +4104,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse downstream like preceded by [', () => {
@@ -4077,7 +4116,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse downstream like preceded by ]', () => {
@@ -4089,19 +4128,19 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.like);
+      assert.strictEqual(tokenizer.current.type, Token.like);
     });
 
     it('should parse nlike token', () => {
       const tokenizer = new Tokenizer('nlike');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse nlike terminated by white space', () => {
       const tokenizer = new Tokenizer('nlike\u2029"*blah"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should set error parsing nlike terminated by "', () => {
@@ -4121,72 +4160,72 @@ describe('Tokenizer', () => {
     it('should parse nlike terminated by (', () => {
       const tokenizer = new Tokenizer('nlike("*blah")');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse nlike terminated by )', () => {
       const tokenizer = new Tokenizer('nlike)"*blah")');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse nlike terminated by ,', () => {
       const tokenizer = new Tokenizer('nlike,"*blah"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse nlike terminated by [', () => {
       const tokenizer = new Tokenizer('nlike["*blah"]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse nlike terminated by ]', () => {
       const tokenizer = new Tokenizer('nlike]"*blah"]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse nlike preceded by white space', () => {
       const tokenizer = new Tokenizer('\u2009nlike "*blah"');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse nlike preceded by "', () => {
       const tokenizer = new Tokenizer('"foobar"nlike "*bar"');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse nlike preceded by (', () => {
       const tokenizer = new Tokenizer('(nlike "*bar")');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse nlike preceded by )', () => {
       const tokenizer = new Tokenizer(')nlike "*bar")');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse nlike preceded by ,', () => {
       const tokenizer = new Tokenizer(',nlike "*bar"');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse nlike preceded by [', () => {
       const tokenizer = new Tokenizer('[nlike "*bar"]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse nlike preceded by ]', () => {
@@ -4195,7 +4234,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse downstream nlike terminated by white space', () => {
@@ -4206,7 +4245,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should set error parsing downstream nlike terminated by "', () => {
@@ -4241,7 +4280,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse downstream nlike terminated by )', () => {
@@ -4252,7 +4291,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse downstream nlike terminated by ,', () => {
@@ -4263,7 +4302,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse downstream nlike terminated by [', () => {
@@ -4274,7 +4313,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse downstream nlike terminated by ]', () => {
@@ -4285,7 +4324,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse downstream nlike preceded by white space', () => {
@@ -4296,7 +4335,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse downstream nlike preceded by "', () => {
@@ -4307,7 +4346,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse downstream nlike preceded by (', () => {
@@ -4319,7 +4358,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse downstream nlike preceded by )', () => {
@@ -4331,7 +4370,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse downstream nlike preceded by ,', () => {
@@ -4343,7 +4382,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse downstream nlike preceded by [', () => {
@@ -4355,7 +4394,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse downstream nlike preceded by ]', () => {
@@ -4367,41 +4406,41 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.nlike);
+      assert.strictEqual(tokenizer.current.type, Token.nlike);
     });
 
     it('should parse number token', () => {
       const tokenizer = new Tokenizer('4204');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 4204);
     });
 
     it('should parse hex number token', () => {
       const tokenizer = new Tokenizer('0xFE');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 0xFE);
     });
 
     it('should parse oct number token', () => {
       const tokenizer = new Tokenizer('0o36');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 0o36);
     });
 
     it('should parse binary number token', () => {
       const tokenizer = new Tokenizer('0b0010010');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 0b0010010);
     });
 
     it('should parse number terminated by white space', () => {
       const tokenizer = new Tokenizer('42\u2003eq/foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4422,42 +4461,42 @@ describe('Tokenizer', () => {
     it('should parse number terminated by (', () => {
       const tokenizer = new Tokenizer('42(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
     it('should parse number terminated by )', () => {
       const tokenizer = new Tokenizer('42)true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
     it('should parse number terminated by ,', () => {
       const tokenizer = new Tokenizer('42,true');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
     it('should parse number terminated by [', () => {
       const tokenizer = new Tokenizer('42[true]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
     it('should parse number terminated by ]', () => {
       const tokenizer = new Tokenizer('42]true]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
     it('should parse number preceded by white space', () => {
       const tokenizer = new Tokenizer('\u2002\u200142 eq /foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4465,7 +4504,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('"test"42 eq /foo');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4473,7 +4512,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('(42 eq /foo)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4481,7 +4520,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(')42 eq /foo)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4489,7 +4528,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(',42 eq /foo');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4497,7 +4536,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('[42 eq /foo]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4505,7 +4544,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(']42 eq /foo]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4519,7 +4558,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4558,7 +4597,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4572,7 +4611,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4586,7 +4625,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4600,7 +4639,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4618,7 +4657,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4631,7 +4670,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4645,7 +4684,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4657,7 +4696,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4669,7 +4708,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4685,7 +4724,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4699,7 +4738,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
@@ -4713,21 +4752,21 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.number);
+      assert.strictEqual(tokenizer.current.type, Token.number);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
     it('should parse unknown token', () => {
       const tokenizer = new Tokenizer('asdf');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
     it('should parse unknown terminated by white space', () => {
       const tokenizer = new Tokenizer('asdf\u00A0 true');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
@@ -4748,42 +4787,42 @@ describe('Tokenizer', () => {
     it('should parse unknown terminated by (', () => {
       const tokenizer = new Tokenizer('asdf(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
     it('should parse unknown terminated by )', () => {
       const tokenizer = new Tokenizer('asdf)true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
     it('should parse unknown terminated by ,', () => {
       const tokenizer = new Tokenizer('asdf,true');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
     it('should parse unknown terminated by [', () => {
       const tokenizer = new Tokenizer('asdf[true]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
     it('should parse unknown terminated by ]', () => {
       const tokenizer = new Tokenizer('asdf]true]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
     it('should parse unknown preceded by white space', () => {
       const tokenizer = new Tokenizer('  \r\tasdf');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
@@ -4791,7 +4830,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('"test"asdf');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
@@ -4799,7 +4838,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('(asdf)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
@@ -4807,7 +4846,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(')asdf)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
@@ -4815,7 +4854,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(',asdf true');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
@@ -4823,7 +4862,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('[asdf]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
@@ -4831,7 +4870,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(']asdf]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
@@ -4842,7 +4881,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
@@ -4873,7 +4912,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'a22sdf');
     });
 
@@ -4885,7 +4924,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'a22sdf!');
     });
 
@@ -4897,7 +4936,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'a22sdf#');
     });
 
@@ -4908,7 +4947,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'a22sdf#');
     });
 
@@ -4919,7 +4958,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'a22sdf#');
     });
 
@@ -4930,7 +4969,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'a2sdf#');
     });
 
@@ -4945,7 +4984,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
@@ -4957,7 +4996,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
@@ -4969,7 +5008,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'asdf');
     });
 
@@ -4985,7 +5024,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'as32df');
     });
 
@@ -4999,7 +5038,7 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'as32df');
     });
 
@@ -5013,21 +5052,21 @@ describe('Tokenizer', () => {
       tokenizer.next();
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.unknown);
+      assert.strictEqual(tokenizer.current.type, Token.unknown);
       assert.strictEqual(tokenizer.current.value, 'as32df');
     });
 
     it('should parse root target', () => {
       const tokenizer = new Tokenizer('/');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
     it('should parse root target terminated by white space', () => {
       const tokenizer = new Tokenizer('/ ');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
@@ -5042,98 +5081,98 @@ describe('Tokenizer', () => {
     it('should parse target', () => {
       const tokenizer = new Tokenizer('/foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
     it('should parse 2 part target', () => {
       const tokenizer = new Tokenizer('/foo/bar');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
     it('should parse 3 part target', () => {
       const tokenizer = new Tokenizer('/foo/bar/baz');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'baz');
     });
 
     it('should parse numeric target', () => {
       const tokenizer = new Tokenizer('/2');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
     it('should parse numeric target succeded by string target', () => {
       const tokenizer = new Tokenizer('/42/bar');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 42);
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
     it('should parse numeric target succeded by numeric target', () => {
       const tokenizer = new Tokenizer('/42/24');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 42);
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 24);
     });
 
     it('should parse string target succeded by numeric target', () => {
       const tokenizer = new Tokenizer('/foo/42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 42);
     });
 
     it('should parse root target preceded by white space', () => {
       const tokenizer = new Tokenizer(' /');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
     it('should parse target preceded by white space', () => {
       const tokenizer = new Tokenizer('\n\t /foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
     it('should parse 2 part target preceded by white space', () => {
       const tokenizer = new Tokenizer(' \r\v/foo/bar');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
     it('should parse numeric target preceded by white space', () => {
       const tokenizer = new Tokenizer('  /2');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
@@ -5141,7 +5180,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('/foo/');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
@@ -5149,7 +5188,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('(/');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
@@ -5157,7 +5196,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('(/foo');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
@@ -5165,10 +5204,10 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('(/foo/bar');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
@@ -5176,17 +5215,17 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('(/2');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
     it('should parse blank target subkey of numeric', () => {
       const tokenizer = new Tokenizer('/2/');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
@@ -5194,7 +5233,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(')/');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
@@ -5202,7 +5241,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(')/foo');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
@@ -5210,10 +5249,10 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(')/foo/bar');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
@@ -5221,7 +5260,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(')/2');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
@@ -5229,7 +5268,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(',/');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
@@ -5237,7 +5276,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(',/foo');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
@@ -5245,10 +5284,10 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(',/foo/bar');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
@@ -5256,7 +5295,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(',/2');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
@@ -5264,7 +5303,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('[/');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
@@ -5272,7 +5311,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('[/foo');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
@@ -5280,10 +5319,10 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('[/foo/bar');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
@@ -5291,7 +5330,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('[/2');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
@@ -5299,7 +5338,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(']/');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
@@ -5307,7 +5346,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(']/foo');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
@@ -5315,10 +5354,10 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(']/foo/bar');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
@@ -5326,31 +5365,31 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer(']/2');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
     it('should parse target terminated by white space', () => {
       const tokenizer = new Tokenizer('/foo eq 42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
     it('should parse 2 part target terminated by white space', () => {
       const tokenizer = new Tokenizer('/foo/bar eq 42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
     it('should parse numeric target terminated by white space', () => {
       const tokenizer = new Tokenizer('/2 eq 42');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
@@ -5358,38 +5397,38 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('/foo/ eq 42');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
     it('should parse root target terminated by (', () => {
       const tokenizer = new Tokenizer('/(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
     it('should parse target terminated by (', () => {
       const tokenizer = new Tokenizer('/foo(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
     it('should parse 2 part target terminated by (', () => {
       const tokenizer = new Tokenizer('/foo/bar(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
     it('should parse numeric target terminated by (', () => {
       const tokenizer = new Tokenizer('/2(true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
@@ -5397,38 +5436,38 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('/foo/(true)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
     it('should parse root target terminated by )', () => {
       const tokenizer = new Tokenizer('/)true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
     it('should parse target terminated by )', () => {
       const tokenizer = new Tokenizer('/foo)true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
     it('should parse 2 part target terminated by )', () => {
       const tokenizer = new Tokenizer('/foo/bar)true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
     it('should parse numeric target terminated by )', () => {
       const tokenizer = new Tokenizer('/2)true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
@@ -5436,38 +5475,38 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('/foo/)true)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
     it('should parse root target terminated by ,', () => {
       const tokenizer = new Tokenizer('/,true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
     it('should parse target terminated by ,', () => {
       const tokenizer = new Tokenizer('/foo,true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
     it('should parse 2 part target terminated by ,', () => {
       const tokenizer = new Tokenizer('/foo/bar,true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
     it('should parse numeric target terminated by ,', () => {
       const tokenizer = new Tokenizer('/2,true)');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
@@ -5475,38 +5514,38 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('/foo/,true)');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
     it('should parse root target terminated by [', () => {
       const tokenizer = new Tokenizer('/[true]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
     it('should parse target terminated by [', () => {
       const tokenizer = new Tokenizer('/foo[true]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
     it('should parse 2 part target terminated by [', () => {
       const tokenizer = new Tokenizer('/foo/bar[true]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
     it('should parse numeric target terminated by [', () => {
       const tokenizer = new Tokenizer('/2[true]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
@@ -5514,38 +5553,38 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('/foo/[true]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
     it('should parse root target terminated by ]', () => {
       const tokenizer = new Tokenizer('/]true]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
     it('should parse target terminated by ]', () => {
       const tokenizer = new Tokenizer('/foo]true]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
     });
 
     it('should parse 2 part target terminated by ]', () => {
       const tokenizer = new Tokenizer('/foo/bar]true]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'foo');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 'bar');
     });
 
     it('should parse numeric target terminated by ]', () => {
       const tokenizer = new Tokenizer('/2]true]');
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, 2);
     });
 
@@ -5553,7 +5592,7 @@ describe('Tokenizer', () => {
       const tokenizer = new Tokenizer('/foo/]true]');
       tokenizer.next();
       tokenizer.next();
-      assert.strictEqual(tokenizer.current.type, TokenType.target);
+      assert.strictEqual(tokenizer.current.type, Token.target);
       assert.strictEqual(tokenizer.current.value, '');
     });
 
