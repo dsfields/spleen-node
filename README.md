@@ -491,7 +491,7 @@ Represents the graph structure of a `spleen` filter.
 
       - `value`: _(required)_ the value to be matched.
 
-      This method returns a Boolean value — `true` if there is a match, and `false` if there is no match.
+      This method returns a Boolean value indicating whether or not there was a match.
 
     + `Filter.prototype.or(clause | filter)`: appends an instance of `Clause` or the statemetns within a `Filter` to the `Filter`'s list of statements using an "or" conjunctive.
 
@@ -519,11 +519,29 @@ Represents the graph structure of a `spleen` filter.
 
       - `urlEncode`: _(optional)_ a Boolean indicating whether or not the string should be URL encode.
 
-      This method returns a string.
+      This method returns a Boolean indicating whether or not that there was a match.
+
+#### Class: `Like`
+
+Represents a "like" string matching expression.  This clause is used as the "object" in "search" comparisons.
+
+  * __Properties__
+
+    + `Like.prototype.value`: gets the string value of the "like" expression.
+
+  * __Methods__
+
+    + `Like.prototype.match(value)`: compares a given string agains the like expression.
+
+      _Parameters_
+
+      - `value`: a string value to match.
+    
+    This method returns a Boolean.
 
 #### Class: `Range`
 
-Represents a range of two values.  This is class is used as the "object" in "between" comparisons.
+Represents a range of two values.  This is class is used as the "object" in "range" comparisons.
 
   * __Properties__
 
@@ -533,11 +551,13 @@ Represents a range of two values.  This is class is used as the "object" in "bet
 
   * __Methods__
 
-    + `Range.between(value)`: returns a Boolean indicating whether or not the value falls within the range defined by `lower` and `upper`.
+    + `Range.between(value)`: indicates whether or not the value falls within the range defined by `lower` and `upper`.
 
       _Parameters_
 
       - `value`: _(required)_ a string or number value to evaluate.
+
+      This method returns a Boolean indicating whether or not that there was a match.
 
 #### Class: `Target`
 
@@ -555,12 +575,12 @@ Represents a reference to a field on an object being filtered.
 
       _Parameters_
 
-        - `value`: _(required)_ the JSON pointer to parse.
+      - `value`: _(required)_ the JSON pointer to parse.
 
     This method returns an instance of `Target` representing the JSON pointer.
 
 ## Conversions
 
-One of the goals of `spleen` is to provide a high-level abstraction of filter expressions.  The idea is to provide a DSL that can be consistently used across application layers without leaking implementation details.  Each layer in the application is then responsible for consuming a `spleen` filter expression in its own way.
+One of the goals of `spleen` is to provide a high-level abstraction for filter expressions.  The idea is to provide a DSL that can be consistently used across application layers without leaking implementation details.  Each layer in the application is then responsible for consuming a `spleen` filter expression in its own way.
 
-In the case of a data access layer, this typically means converting a `Filter` instance into some flavor of SQL.  For now, there is a single plugin available for accomplishing this end: [spleen-n1ql](https://www.npmjs.com/package/spleen-n1ql).
+In the case of a data access layer, this typically means converting a `Filter` instance into some flavor of SQL.  For now, there is a single plugin available for accomplishing this end: [spleen-n1ql](https://www.npmjs.com/package/spleen-n1ql) (for now).
