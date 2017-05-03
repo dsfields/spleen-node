@@ -351,13 +351,13 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
       _Parameters_
 
-        - `value`: _(required)_ a JSON-pointer string.
+      - `value`: _(required)_ a JSON-pointer string.
     
     + `Clause.literal(value)` sets the subject of the `Clause` to a literal.
 
       _Parameters_
 
-        - `value`: _(required)_ a string, number, or Boolean value.
+      - `value`: _(required)_ a string, number, or Boolean value.
   
     Once the `subject` of the `Clause` has been set, available methods begin branching.  Calling one method itself unavailable, while also enabling methods in the following fashion:
 
@@ -375,49 +375,49 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
         - `Clause.prototype.lte()`: sets the operator to `lte` (less than or equal to).
 
-        Children:
+        __Children:__
 
-          - `Clause.prototype.target(value)`: ets the object of the `Clause` to an instance of `Target`.
+        - `Clause.prototype.target(value)`: ets the object of the `Clause` to an instance of `Target`.
 
-            _Parameters_
+          _Parameters_
 
-              - `value`: _(required)_ a JSON-pointer string.
+            - `value`: _(required)_ a JSON-pointer string.
           
-          - `Clause.prototype.literal(value)`: sets the object of the `Clause` to a literal.
+        - `Clause.prototype.literal(value)`: sets the object of the `Clause` to a literal.
 
-            _Parameters_
+          _Parameters_
 
-              - `value`: _(required)_ a string, number, or Boolean value.
+          - `value`: _(required)_ a string, number, or Boolean value.
 
       + __Array__
 
         - `Clause.prototype.in()`: sets the operator to `in` (in array).
 
         - `Clause.prototype.nin()`: sets the operator to `nin` (not in array).
-      
-        Children:
+
+        __Children:__
 
           - `Clause.prototype.array(value)`: sets the `object` of the `Clause` to an array.
 
             _Parameters_
 
-              - `value`: _(required)_ an array of strings, numbers, and Booleans.
+            - `value`: _(required)_ an array of strings, numbers, and Booleans.
 
       + __Range__
 
         - `Clause.prototype.between()`: sets the operator to `between` (between two values).
 
         - `Clause.prototype.nbetween()`: sets the operator to `nbetween` (not between two values).
-      
-        Children:
 
-          - `Clause.prototype.rante(lower, upper)`: a range of values that the value of subject should fall between.
+        __Children:__
+
+          - `Clause.prototype.range(lower, upper)`: a range of values that the value of subject should fall between.
 
             _Parameters_
 
-              - `lower`: _(required)_ a string or number representing the lower portion of the range expression.
+            - `lower`: _(required)_ a string or number representing the lower portion of the range expression.
 
-              - `upper`: _(required)_ a string or number representing the upper portion of the range expression.
+            - `upper`: _(required)_ a string or number representing the upper portion of the range expression.
 
       + __Search__
 
@@ -425,13 +425,13 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
         - `Clause.prototype.nlike()`: sets the operator to `nlike` (not like a string pattern)
 
-        Children:
+        __Children:__
 
           - `Cluase.prototype.pattern(value)`: sets the object to a string matching pattern.  This method wraps `value` in an instance of `Like`.
 
             _Parameters_
 
-              - `value`: _(required)_ a string value using string matching the wildcards described in "[Syntax](#syntax)."
+            - `value`: _(required)_ a string value using string matching the wildcards described in "[Syntax](#syntax)."
 
 #### Class: `Filter`
 
@@ -449,65 +449,39 @@ Represents the graph structure of a `spleen` filter.
 
   * __Methods__
 
-    + `Filter.group(filter)`: factory method for creating a new filter graph, where the first set of clauses are nested in a group.
+    + `Filter.group(filter)`: factory method for creating a new filter graph, where the first statement is a set of clauses nested in a group.
 
       _Parameters_
 
-        - `filter`: _(required)_ an instance of `Filter` to nest in a group.
+      - `filter`: _(required)_ an instance of `Filter` to nest in a group.
 
       This method returns an instance of `Filter`.
 
-    + `Filter.parse(filter)`: parses a `spleen` filter expression in infix notation.
+    + `Filter.where(clause)`: factory method for creating new filter graphs, where the first statement is a clause.
 
       _Parameters_
 
-        - `filter`: _(required)_ a string value representing a the filter expression.
-
-      This method returns an object with the following keys:
-
-        - `error`: if `success` is `false`, this key is an instance of `ParserError`.
-
-        - `success`: a Boolean value indicating whether or not parsing was successful.
-
-        - `value`: the representative instance of `Filter`.  If `success` is false, this key is `null`.
-
-    + `Filter.where(subject, op, object)`: factory method for creating new filter graphs.
-
-      _Parameters_
-
-        - `subject`: _(required)_ the "subject" portion of a filter clause expression.  This can be an instance of `Target`, string, number, or Boolean.
-
-        - `op`: _(required)_ the comparison operation to perform, which is defined by an instance of `Operator`.
-
-        - `object`: _(required)_ the "object" portion of a filter clause expression.  This can be a variety of values, and may be restricted by which operator is being used in the filter clause.  See the section on [Grammar](#grammar) for more information.
+      - `clause`: _(required)_ an instance of `Clause` to use as the first statement in the `Filter`.
 
       This method returns an instance of `Filter`.
 
-    + `Filter.prototype.and(subject, op, object)`: _(overload)_ appends a clause to the `Filter` instance using an "and" conjunctive.
+    + `Filter.prototype.and(clause | filter)`: appends an instance of `Clause` or the statemetns within a `Filter` to the `Filter`'s list of statements using an "and" conjunctive.
 
       _Parameters_
 
-        - `subject`: _(required)_ the "subject" portion of a filter clause expression.  This can be an instance of `Target`, string, number, or Boolean.
+      - `clause`: _(required)_ an instance of `Clause`.
 
-        - `op`: _(required)_ the comparison operation to perform, which is defined by an instance of `Operator`.
+      ...or...
 
-        - `object`: _(required)_ the "object" portion of a filter clause expression.  This can be a variety of values, and may be restricted by which operator is being used in the filter clause.  See the section on [Grammar](#grammar) for more information.
+      - `filter` _(required)_ an instance of `Filter`.  If this overload is called, all of the statements for the given filter are concatonated onto the end of the `Filter` instance's statements.  All statements appended on are treated as individual statements, and not a single group.  The first statement in the joined filter is conjoined with an "and."
 
       This method returns the `Filter` instance.
 
-    + `Filter.prototype.and(filterGraph)`: _(overload)_ appends a filter graph as using an "and" conjunctive.
+    + `Filter.prototype.andGroup(filter)`: ands an instance of `Filter` as a single statement evaluated as a group.  The statement is joined to the previous statement with an "and."
 
       _Parameters_
 
-        - `filterGraph`: _(required)_ an instance of `Filter` to add.
-
-      This method returns the `Filter` instance.
-
-    + `Filter.prototype.andGroup(filterGraph)`: _(overload)_ appends a new group of clauses using an "and" conjunctive, and nests the given `Filter` within this group.
-
-      _Parameters_
-
-        - `filter`: _(required)_ an instance of `Filter` to add.
+      - `filter`: _(required)_ the instance of `Filter` to add as a group statement.
 
       This method returns the `Filter` instance.
 
@@ -515,35 +489,27 @@ Represents the graph structure of a `spleen` filter.
 
       _Parameters_
 
-        - `value`: _(required)_ the value to be matched.
+      - `value`: _(required)_ the value to be matched.
 
       This method returns a Boolean value — `true` if there is a match, and `false` if there is no match.
 
-    + `Filter.prototype.or(subject, op, object)`: _(overload)_ appends a clause to the `Filter` instance using an "or" conjunctive.
+    + `Filter.prototype.or(clause | filter)`: appends an instance of `Clause` or the statemetns within a `Filter` to the `Filter`'s list of statements using an "or" conjunctive.
 
       _Parameters_
 
-        - `subject`: _(required)_ the "subject" portion of a filter clause expression.  This can be an instance of `Target`, string, number, or Boolean.
+      - `clause`: _(required)_ an instance of `Clause`.
 
-        - `op`: _(required)_ the comparison operation to perform, which is defined by an instance of `Operator`.
+      ...or...
 
-        - `object`: _(required)_ the "object" portion of a filter clause expression.  This can be a variety of values, and may be restricted by which operator is being used in the filter clause.  See the section on [Grammar](#grammar) for more information.
+      - `filter` _(required)_ an instance of `Filter`.  If this overload is called, all of the statements for the given filter are concatonated onto the end of the `Filter` instance's statements.  All statements appended on are treated as individual statements, and not a single group.  The first statement in the joined filter is conjoined with an "or."
 
       This method returns the `Filter` instance.
 
-    + `Filter.prototype.or(filterGraph)`: _(overload)_ appends a filter graph using an "or" conjunctive.
+    + `Filter.prototype.orGroup(filter)`: ands an instance of `Filter` as a single statement evaluated as a group.  The statement is joined to the previous statement with an "or."
 
       _Parameters_
 
-        - `filterGraph`: _(required)_ an instance of `Filter` to add.
-
-      This method returns the `Filter` instance.
-
-    + `Filter.prototype.orGroup(filterGraph)`: _(overload)_ appends a new group of clauses using an "or" conjunctive, and nests the given `Filter` within this group.
-
-      _Parameters_
-
-        - `filterGraph`: _(required)_ an instance of `Filter` to add.
+      - `filter`: _(required)_ the instance of `Filter` to add as a group statement.
 
       This method returns the `Filter` instance.
 
@@ -551,7 +517,7 @@ Represents the graph structure of a `spleen` filter.
 
       _Parameters_
 
-        - `urlEncode`: _(optional)_ a Boolean indicating whether or not the string should be URL encode.
+      - `urlEncode`: _(optional)_ a Boolean indicating whether or not the string should be URL encode.
 
       This method returns a string.
 
@@ -567,24 +533,11 @@ Represents a range of two values.  This is class is used as the "object" in "bet
 
   * __Methods__
 
-    + `Range.from(a, b)`: factory method that takes two values, and creates a `Range` instance.  The method will set the `lower` and `upper` properties accordingly.
+    + `Range.between(value)`: returns a Boolean indicating whether or not the value falls within the range defined by `lower` and `upper`.
 
       _Parameters_
 
-        - `a`: _(required)_ a string or a number to use in the range.
-
-        - `b` _(required)_ a string or a number to use in the range.
-
-      This method returns an instance of `Range`.
-
-    + `Range.parse(value)`: parses a string representation of a range value into an instance of `Range`.
-
-      _Parameters_
-
-        - `value`: _(required)_ the string to parse.
-
-      This method returns an instance of `Range`.
-
+      - `value`: _(required)_ a string or number value to evaluate.
 
 #### Class: `Target`
 
