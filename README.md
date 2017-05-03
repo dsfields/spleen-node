@@ -374,19 +374,19 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
         - `Clause.prototype.lte()`: sets the operator to `lte` (less than or equal to).
 
-      __Children__
+        __Children__
 
-        - `Clause.prototype.target(value)`: ets the object of the `Clause` to an instance of `Target`.
+          - `Clause.prototype.target(value)`: ets the object of the `Clause` to an instance of `Target`.
 
-          _Parameters_
+            _Parameters_
 
-            - `value`: _(required)_ a JSON-pointer string.
-        
-        - `Clause.prototype.literal(value)`: sets the object of the `Clause` to a literal.
+              - `value`: _(required)_ a JSON-pointer string.
+          
+          - `Clause.prototype.literal(value)`: sets the object of the `Clause` to a literal.
 
-          _Parameters_
+            _Parameters_
 
-            - `value`: _(required)_ a string, number, or Boolean value.
+              - `value`: _(required)_ a string, number, or Boolean value.
 
       + __Array__
 
@@ -394,13 +394,13 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
         - `Clause.prototype.nin()`: sets the operator to `nin` (not in array).
       
-      __Children__
+        __Children__
 
-        - `Clause.prototype.array(value)`: sets the `object` of the `Clause` to an array.
+          - `Clause.prototype.array(value)`: sets the `object` of the `Clause` to an array.
 
-          _Parameters_
+            _Parameters_
 
-            - `value`: _(required)_ an array of strings, numbers, and Booleans.
+              - `value`: _(required)_ an array of strings, numbers, and Booleans.
 
       + __Range__
 
@@ -408,15 +408,15 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
         - `Clause.prototype.nbetween()`: sets the operator to `nbetween` (not between two values).
       
-      __Children__
+        __Children__
 
-        - `Clause.prototype.rante(lower, upper)`: a range of values that the value of subject should fall between.
+          - `Clause.prototype.rante(lower, upper)`: a range of values that the value of subject should fall between.
 
-          _Parameters_
+            _Parameters_
 
-            - `lower`: _(required)_ a string or number representing the lower portion of the range expression.
+              - `lower`: _(required)_ a string or number representing the lower portion of the range expression.
 
-            - `upper`: _(required)_ a string or number representing the upper portion of the range expression.
+              - `upper`: _(required)_ a string or number representing the upper portion of the range expression.
 
       + __Search__
 
@@ -424,9 +424,9 @@ Represents a single Boolean expression.  An instance of `Clause` is built using 
 
         - `Clause.prototype.nlike()`: sets the operator to `nlike` (not like a string pattern)
 
-      __Children__
+        __Children__
 
-        - `Cluase.prototype.pattern()`
+          - `Cluase.prototype.pattern()`
 
 #### Class: `Filter`
 
