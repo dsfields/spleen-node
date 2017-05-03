@@ -1,8 +1,8 @@
 # spleen
 
-Representing filter expressions across application layers is a pretty common problem.  Say we have a REST endpoint that accepts a filter, which is then deserialized, passed to your domain logic for process, and then passed into you data access layer for querying information.  There are a couple of issues that come out of this scenario.  How is the filter expression formatted when it's passed in via an HTTP request?  How do we pass this expression to our domain logic and data access layers without leaking implementation details?  The `spleen` module seeks to solve these issues.
+Representing filter expressions across application layers is a pretty common problem.  Say we have a REST endpoint that accepts a filter, which is then deserialized, passed to your domain logic for processing, and then passed into your data access layer for querying information.  There are a couple of issues that come out of this scenario.  How is the filter expression formatted when it's passed in via an HTTP request?  How do we pass this expression to our domain logic and data access layers without leaking implementation details?  The `spleen` module seeks to solve these issues.
 
-There are a number of competing methods for solving this issue.  Most notably GraphQL and OData.  However, these tools are not suitable for all use cases.  The `spleen` module is ideally suited for RESTful and intent-based API designs.
+There are a number of competing methods for solving this issue.  Most notably GraphQL and OData.  However, these tools are not suitable for all use cases.  The `spleen` module is ideally suited for RESTful and intent-based API designs, and requires minimal effort to implement.
 
 __Contents__
 
@@ -14,8 +14,9 @@ __Contents__
   * [Building Filters](#building-filters)
   * [API](#api)
     + [Module](#module)
+    + [Class: `Clause`](#class-clause)
     + [Class: `Filter`](#class-filter)
-    + [Class: `Operator`](#class-operator)
+    + [Class: `Like`](#class-like)
     + [Class: `Range`](#class-range)
     + [Class: `Target`](#class-target)
   * [Conversions](#conversions)
@@ -32,23 +33,42 @@ You can then parse `spleen` filter expression strings:
 
 ```js
 const spleen = require('spleen');
-const Filter = spleen.Filter;
 
 const expression = '/foo eq "bar" and /baz gt 42';
 
-const filter = Filter.parse(expression);
+const filter = spleen.parse(expression);
 ```
 
 Or define filter graphs directly (which is more efficient from a runtime perspective):
 
 ```js
 const spleen = require('spleen');
-const Filter = filtering.Filter;
-const Operator = filtering.Operator;
-const Target = filtering.Target;
 
-const filter = Filter.where(Target.jsonPointer('/foo'), Operator.eq, 'bar')
-                     .and(Target.jsonPointer('/baz'), Operator.gt, 42);
+const Clause = filtering.Clause;
+const Filter = spleen.Filter;
+
+const filter = Filter
+  .where(
+    Clause
+      .target('/foo')
+      .eq()
+      .target('/bar')
+  )
+  .and(
+    Clause
+      .target('/baz')
+      .gt()
+      .literal(42)
+  );
+
+const src = {
+  foo: 'a',
+  bar: 'a',
+  baz: 100
+};
+
+const match = filter.match(src);
+console.log(match); // true
 ```
 
 ## Spleen Expressions
@@ -182,9 +202,9 @@ The following is a list of all possible values for the various types of terms us
 
   * `<object:search/>`:
 
-    + `"%match_pattern%"`: a set of characters and wildcards used for matching string patterns.  Wildcards include:
+    + `*match_pattern*"`: a set of characters and wildcards used for matching string patterns.  Wildcards include:
 
-      - `%`: match zero or more of any character.
+      - `*`: match zero or more of any character.  Most like pattern formats use a `%` for this purpose.  The `spleen` module uses `*` to be more URL-friendly.
 
       - `_`: match one of any character.
 
@@ -209,7 +229,7 @@ Field `bar` of field `foo` is not equal to string literal `"baz"`, and field `qu
 The conditions field `bar` of field `foo` is not equal to string literal `"baz"` and field `qux` is greater than or equal to 42 must be true, or the field `quux` must start with `"Hello"`.
 
 ```
-(/foo/bar neq "baz" and /qux gte 42) or /quux like "Hello%"
+(/foo/bar neq "baz" and /qux gte 42) or /quux like "Hello*"
 ```
 
 The value of field `foo` should not be in the array of values `42`, `"bar"`, and `"baz"`.
@@ -233,7 +253,7 @@ The value of field `foo` is greater than or equal to `0` or less than or equal t
 The primary use case for `spleen` expressions is to accept a filter condition from an external source.  For example, as a query parameter on a request to a REST-based API:
 
 ```
-GET api/v1/organizations?filter=/customerId+eq+"123"+and+/name+like+"%25awesome%25"
+GET api/v1/organizations?filter=/customerId+eq+"123"+and+/name+like+"*awesome*"
 ```
 
 ## Building Filters
@@ -247,29 +267,34 @@ const Operator = spleen.Operator;
 const Range = spleen.Range;
 const Target = spleen.Target;
 
-const filter = Filter.where(
-    Target.jsonPointer('/foo'),
-    Operator.eq,
-    'bar'
+const filter = Filter
+  .where(
+    Clause
+      .target('/foo')
+      .eq()
+      .literal('bar')
   )
   .and(
-    Target.jsonPointer('/baz'),
-    Operator.between,
-    Range.from('a', 'm')
-  );
-
-const isNot42 = Filter.where(
-    Target.jsonPointer('/qux'),
-    Operator.neq,
-    42
+    Clause
+      .target('/baz')
+      .between()
+      .range('a', 'm')
   )
-  .or(
-    Target.jsonPointer('/quux'),
-    Operator.lt,
-    42
+  .andGroup(
+    Filter
+      .where(
+        Clause
+          .target('/qux')
+          .neq()
+          .literal(42)
+      )
+      .or(
+        Clause
+          .target('/quux')
+          .lt()
+          .literal(42)
+      )
   );
-
-filter.andGroup(isNot42);
 ```
 
 ## API
@@ -280,17 +305,133 @@ The primary interface exposes all of the classes needed to build `spleen` filter
 
   * __Properties__
 
+    + `spleen.Clause` gets a reference to the [`Clause`](#class-clause) class.
+
     + `spleen.errors`: gets an object with references to all error types thrown by the module:
+
+      - `MatchError`: an error thrown when `match()` is called on an invalid `Filter`.  Generally, this should never happen.
 
       - `ParserError`: an error thrown when a `spleen` expression string cannot be parsed.  This error's `data` property is the numeric index of the invalid token encountered by the parser.
 
     + `spleen.Filter`: gets a reference to the [`Filter`](#class-filter) class.
 
-    + `spleen.Operator`: gets a reference to the [`Operator`](#class-operator) class.
+    + `spleen.Like`: gets a reference to the [`Like`](#class-like) class.
+
+    + `spleen.parse(value)` parses a string into an instance of `Filter`.  This method takes a single string argument which represents the filter.  If the filter is invalid, a `ParseError` is thrown.
 
     + `spleen.Range`: gets a reference to the [`Range`](#class-range) class.
 
     + `spleen.Target`: gets a reference to the [`Target`](class-target) class.
+
+#### Class: `Clause`
+
+Represents a single Boolean expression.  An instance of `Clause` is built using the methods described below, and can only be usable within a `Filter` once they are complete, valid expressions.  Meaning, they must have a subject, verb, and object (as described in "[Grammar](#grammar)").
+
+  * __Properties__
+
+    + `subject`: gets the subject value for the `Clause`.  This will always be either an instance of `Target`, a string, number, or Boolean.
+
+    + `operator`: gets the verb portion of the `Clause`.  This is an operator which is an object with the key `type`.  The `type` property can have a value of `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `between`, `nbetween`, `like`, or `nlike`.
+
+    + `object`: the object portion of the `Clause`.  The possible values for this property are constrained by the value of `operator`.
+
+      - If `operator` is `eq`, `neq`, `gt`, `gte`, `lt`, or `lte`, then `object` can be an instance of `Target`, a string, number, or Boolean.
+
+      - If `operator` is `in` or `nin`, then `object` can be an array of strings, numbers, and Booleans.
+
+      - If `operator` is `between` or `nbetween` then `object` can be an instance of `Range`.
+
+      - If `operator` is `like` or `nlike` then `object` can be an instance of `Like`.
+
+  * __Methods__
+
+    Many of the methods for `Clause` only become available after a certain method has been called.  All instances of `Clause` are constructed using one of its factory methods:
+
+    + `Clause.target(value)`: sets the subject of the `Clause` to an instance of `Target`.
+
+      _Parameters_
+
+      - `value`: _(required)_ a JSON-pointer string.
+    
+    + `Clause.literal(value)` sets the subject of the `Clause` to a literal.
+
+      _Parameters_
+
+      - `value`: _(required)_ a string, number, or Boolean value.
+  
+    Once the `subject` of the `Clause` has been set, available methods begin branching.  Calling one method itself unavailable, while also enabling methods in the following fashion:
+
+      + __Comparison__
+
+        - `Clause.prototype.eq()`: sets the operator to `eq` (equal to).
+
+        - `Clause.prototype.neq()`: sets the operator to `neq` (not equal to).
+
+        - `Clause.prototype.gt()`: sets the operator to `gt` (greater than).
+
+        - `Clause.prototype.gte()`: sets the operator to `gt` (greater than or equal to).
+
+        - `Clause.prototype.lt()`: sets the operator to `lt` (less than).
+
+        - `Clause.prototype.lte()`: sets the operator to `lte` (less than or equal to).
+
+        __Children:__
+
+        - `Clause.prototype.target(value)`: ets the object of the `Clause` to an instance of `Target`.
+
+          _Parameters_
+
+            - `value`: _(required)_ a JSON-pointer string.
+          
+        - `Clause.prototype.literal(value)`: sets the object of the `Clause` to a literal.
+
+          _Parameters_
+
+          - `value`: _(required)_ a string, number, or Boolean value.
+
+      + __Array__
+
+        - `Clause.prototype.in()`: sets the operator to `in` (in array).
+
+        - `Clause.prototype.nin()`: sets the operator to `nin` (not in array).
+
+        __Children:__
+
+          - `Clause.prototype.array(value)`: sets the `object` of the `Clause` to an array.
+
+            _Parameters_
+
+            - `value`: _(required)_ an array of strings, numbers, and Booleans.
+
+      + __Range__
+
+        - `Clause.prototype.between()`: sets the operator to `between` (between two values).
+
+        - `Clause.prototype.nbetween()`: sets the operator to `nbetween` (not between two values).
+
+        __Children:__
+
+          - `Clause.prototype.range(lower, upper)`: a range of values that the value of subject should fall between.
+
+            _Parameters_
+
+            - `lower`: _(required)_ a string or number representing the lower portion of the range expression.
+
+            - `upper`: _(required)_ a string or number representing the upper portion of the range expression.
+
+      + __Search__
+
+        - `Clause.prototype.like()`: sets the operator to `like` (like a string pattern)
+
+        - `Clause.prototype.nlike()`: sets the operator to `nlike` (not like a string pattern)
+
+        __Children:__
+
+          - `Cluase.prototype.pattern(value)`: sets the object to a string matching pattern.  This method wraps `value` in an instance of `Like`.
+
+            _Parameters_
+
+            - `value`: _(required)_ a string value using string matching the wildcards described in "[Syntax](#syntax)."
 
 #### Class: `Filter`
 
@@ -298,73 +439,49 @@ Represents the graph structure of a `spleen` filter.
 
   * __Properties__
 
-    + `Filter.prototype.params`: gets an array of all unique literal values in the order they are encountered.
-
     + `Filter.prototype.fields`: gets an array of all field references used in the filter.
 
-    + `Filter.prototype.value`: gets the graph of filter criteria.
+    + `Filter.prototype.statements`: gets an array of all nodes within the filter graph.  Each entry is an object that consists of the keys:
+
+      - `conjunctive`: a string that specifies how a statement is conjoined with the previous statement.  This can be either an empty string, `and`, or `or`.
+
+      - `value`: the value of the statement.  This can be either an instance of `Clause` or `Filter`.  If `value` is an instance of `Filter` then the statement is interpreted as a group.
 
   * __Methods__
 
-    + `Filter.group(filter)`: factory method for creating a new filter graph, where the first set of clauses are nested in a group.
+    + `Filter.group(filter)`: factory method for creating a new filter graph, where the first statement is a set of clauses nested in a group.
 
       _Parameters_
 
-        - `filter`: _(required)_ an instance of `Filter` to nest in a group.
+      - `filter`: _(required)_ an instance of `Filter` to nest in a group.
 
       This method returns an instance of `Filter`.
 
-    + `Filter.parse(filter)`: parses a `spleen` filter expression in infix notation.
+    + `Filter.where(clause)`: factory method for creating new filter graphs, where the first statement is a clause.
 
       _Parameters_
 
-        - `filter`: _(required)_ a string value representing a the filter expression.
-
-      This method returns an object with the following keys:
-
-        - `error`: if `success` is `false`, this key is an instance of `ParserError`.
-
-        - `success`: a Boolean value indicating whether or not parsing was successful.
-
-        - `value`: the representative instance of `Filter`.  If `success` is false, this key is `null`.
-
-    + `Filter.where(subject, op, object)`: factory method for creating new filter graphs.
-
-      _Parameters_
-
-        - `subject`: _(required)_ the "subject" portion of a filter clause expression.  This can be an instance of `Target`, string, number, or Boolean.
-
-        - `op`: _(required)_ the comparison operation to perform, which is defined by an instance of `Operator`.
-
-        - `object`: _(required)_ the "object" portion of a filter clause expression.  This can be a variety of values, and may be restricted by which operator is being used in the filter clause.  See the section on [Grammar](#grammar) for more information.
+      - `clause`: _(required)_ an instance of `Clause` to use as the first statement in the `Filter`.
 
       This method returns an instance of `Filter`.
 
-    + `Filter.prototype.and(subject, op, object)`: _(overload)_ appends a clause to the `Filter` instance using an "and" conjunctive.
+    + `Filter.prototype.and(clause | filter)`: appends an instance of `Clause` or the statemetns within a `Filter` to the `Filter`'s list of statements using an "and" conjunctive.
 
       _Parameters_
 
-        - `subject`: _(required)_ the "subject" portion of a filter clause expression.  This can be an instance of `Target`, string, number, or Boolean.
+      - `clause`: _(required)_ an instance of `Clause`.
 
-        - `op`: _(required)_ the comparison operation to perform, which is defined by an instance of `Operator`.
+      ...or...
 
-        - `object`: _(required)_ the "object" portion of a filter clause expression.  This can be a variety of values, and may be restricted by which operator is being used in the filter clause.  See the section on [Grammar](#grammar) for more information.
+      - `filter` _(required)_ an instance of `Filter`.  If this overload is called, all of the statements for the given filter are concatonated onto the end of the `Filter` instance's statements.  All statements appended on are treated as individual statements, and not a single group.  The first statement in the joined filter is conjoined with an "and."
 
       This method returns the `Filter` instance.
 
-    + `Filter.prototype.and(filterGraph)`: _(overload)_ appends a filter graph as using an "and" conjunctive.
+    + `Filter.prototype.andGroup(filter)`: ands an instance of `Filter` as a single statement evaluated as a group.  The statement is joined to the previous statement with an "and."
 
       _Parameters_
 
-        - `filterGraph`: _(required)_ an instance of `Filter` to add.
-
-      This method returns the `Filter` instance.
-
-    + `Filter.prototype.andGroup(filterGraph)`: _(overload)_ appends a new group of clauses using an "and" conjunctive, and nests the given `Filter` within this group.
-
-      _Parameters_
-
-        - `filter`: _(required)_ an instance of `Filter` to add.
+      - `filter`: _(required)_ the instance of `Filter` to add as a group statement.
 
       This method returns the `Filter` instance.
 
@@ -372,35 +489,27 @@ Represents the graph structure of a `spleen` filter.
 
       _Parameters_
 
-        - `value`: _(required)_ the value to be matched.
+      - `value`: _(required)_ the value to be matched.
 
-      This method returns a Boolean value — `true` if there is a match, and `false` if there is no match.
+      This method returns a Boolean value indicating whether or not there was a match.
 
-    + `Filter.prototype.or(subject, op, object)`: _(overload)_ appends a clause to the `Filter` instance using an "or" conjunctive.
+    + `Filter.prototype.or(clause | filter)`: appends an instance of `Clause` or the statemetns within a `Filter` to the `Filter`'s list of statements using an "or" conjunctive.
 
       _Parameters_
 
-        - `subject`: _(required)_ the "subject" portion of a filter clause expression.  This can be an instance of `Target`, string, number, or Boolean.
+      - `clause`: _(required)_ an instance of `Clause`.
 
-        - `op`: _(required)_ the comparison operation to perform, which is defined by an instance of `Operator`.
+      ...or...
 
-        - `object`: _(required)_ the "object" portion of a filter clause expression.  This can be a variety of values, and may be restricted by which operator is being used in the filter clause.  See the section on [Grammar](#grammar) for more information.
+      - `filter` _(required)_ an instance of `Filter`.  If this overload is called, all of the statements for the given filter are concatonated onto the end of the `Filter` instance's statements.  All statements appended on are treated as individual statements, and not a single group.  The first statement in the joined filter is conjoined with an "or."
 
       This method returns the `Filter` instance.
 
-    + `Filter.prototype.or(filterGraph)`: _(overload)_ appends a filter graph using an "or" conjunctive.
+    + `Filter.prototype.orGroup(filter)`: ands an instance of `Filter` as a single statement evaluated as a group.  The statement is joined to the previous statement with an "or."
 
       _Parameters_
 
-        - `filterGraph`: _(required)_ an instance of `Filter` to add.
-
-      This method returns the `Filter` instance.
-
-    + `Filter.prototype.orGroup(filterGraph)`: _(overload)_ appends a new group of clauses using an "or" conjunctive, and nests the given `Filter` within this group.
-
-      _Parameters_
-
-        - `filterGraph`: _(required)_ an instance of `Filter` to add.
+      - `filter`: _(required)_ the instance of `Filter` to add as a group statement.
 
       This method returns the `Filter` instance.
 
@@ -408,53 +517,31 @@ Represents the graph structure of a `spleen` filter.
 
       _Parameters_
 
-        - `urlEncode`: _(optional)_ a Boolean indicating whether or not the string should be URL encode.
+      - `urlEncode`: _(optional)_ a Boolean indicating whether or not the string should be URL encode.
 
-      This method returns a string.
+      This method returns a Boolean indicating whether or not that there was a match.
 
-#### Class: `Operator`
+#### Class: `Like`
 
-A comparison operator (verb) in a filter condition.
+Represents a "like" string matching expression.  This clause is used as the "object" in "search" comparisons.
 
   * __Properties__
 
-    + `Operator.eq`: gets an instance of `Operator` representing an equal to comparison.
-
-    + `Operator.neq`: gets an instance of `Operator` representing a not equal to comparison.
-
-    + `Operator.gt`: gets an instance of `Operator` representing a greater than comparison.
-
-    + `Operator.gte`: gets an instance of `Operator` representing a greater than or equal to comparison.
-
-    + `Operator.lt`: gets an instance of `Operator` representing an less than comparison.
-
-    + `Operator.lte`: gets an instance of `Operator` representing a less than or equal to comparison.
-
-    + `Operator.between`: gets an instance of `Operator` representing a between comparison.
-
-    + `Operator.nbetween`: gets an instance of `Operator` representing a not between comparison.
-
-    + `Operator.like`: gets an instance of `Operator` representing a string like comparison.
-
-    + `Operator.nlike`: gets an instance of `Operator` representing a not string like comparison.
-
-    + `Operator.in`: gets an instance of `Operator` representing an in array comparison.
-
-    + `Operator.nin`: gets an instance of `Operator` representing a not in array comparison.
+    + `Like.prototype.value`: gets the string value of the "like" expression.
 
   * __Methods__
 
-    + `Operator.parse(term)`: parses a string value it's `Operator` class instance representation.
+    + `Like.prototype.match(value)`: compares a given string agains the like expression.
 
       _Parameters_
 
-        + `term`: _(required)_ the string to parse.
-
-      This method returns an instance of `Operator`.
+      - `value`: a string value to match.
+    
+    This method returns a Boolean.
 
 #### Class: `Range`
 
-Represents a range of two values.  This is class is used as the "object" in "between" comparisons.
+Represents a range of two values.  This is class is used as the "object" in "range" comparisons.
 
   * __Properties__
 
@@ -464,24 +551,13 @@ Represents a range of two values.  This is class is used as the "object" in "bet
 
   * __Methods__
 
-    + `Range.from(a, b)`: factory method that takes two values, and creates a `Range` instance.  The method will set the `lower` and `upper` properties accordingly.
+    + `Range.between(value)`: indicates whether or not the value falls within the range defined by `lower` and `upper`.
 
       _Parameters_
 
-        - `a`: _(required)_ a string or a number to use in the range.
+      - `value`: _(required)_ a string or number value to evaluate.
 
-        - `b` _(required)_ a string or a number to use in the range.
-
-      This method returns an instance of `Range`.
-
-    + `Range.parse(value)`: parses a string representation of a range value into an instance of `Range`.
-
-      _Parameters_
-
-        - `value`: _(required)_ the string to parse.
-
-      This method returns an instance of `Range`.
-
+      This method returns a Boolean indicating whether or not that there was a match.
 
 #### Class: `Target`
 
@@ -499,12 +575,12 @@ Represents a reference to a field on an object being filtered.
 
       _Parameters_
 
-        - `value`: _(required)_ the JSON pointer to parse.
+      - `value`: _(required)_ the JSON pointer to parse.
 
     This method returns an instance of `Target` representing the JSON pointer.
 
 ## Conversions
 
-One of the goals of `spleen` is to provide a high-level abstraction of filter expressions.  The idea is to provide a DSL that can be consistently used across application layers without leaking implementation details.  Each layer in the application is then responsible for consuming a `spleen` filter expression in its own way.
+One of the goals of `spleen` is to provide a high-level abstraction for filter expressions.  The idea is to provide a DSL that can be consistently used across application layers without leaking implementation details.  Each layer in the application is then responsible for consuming a `spleen` filter expression in its own way.
 
-In the case of a data access layer, this typically means converting a `Filter` instance into some flavor of SQL.  For now, there is a single plugin available for accomplishing this end: [spleen-n1ql](https://www.npmjs.com/package/spleen-n1ql).
+In the case of a data access layer, this typically means converting a `Filter` instance into some flavor of SQL.  For now, there is a single plugin available for accomplishing this end: [spleen-n1ql](https://www.npmjs.com/package/spleen-n1ql) (for now).

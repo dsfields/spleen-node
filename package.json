@@ -1,0 +1,36 @@
+{
+  "name": "spleen",
+  "longName": "spleen",
+  "description": "Filter expression parsing, formatting, and abstractions for Node.js.",
+  "version": "1.0.0",
+  "dependencies": {
+    "elv": "^1.0.1"
+  },
+  "devDependencies": {
+    "chai": "~3.5.0",
+    "eslint": "^3.13.1",
+    "eslint-config-airbnb": "^14.0.0",
+    "eslint-plugin-import": "^2.2.0",
+    "eslint-plugin-jsx-a11y": "^3.0.2",
+    "eslint-plugin-react": "^6.9.0",
+    "mocha": "^3.2.0",
+    "nyc": "^10.2.0"
+  },
+  "keywords": [
+    "conditional",
+    "filter",
+    "if",
+    "where"
+  ],
+  "license": "MIT",
+  "main": "./lib",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dsfields/spleen-node"
+  },
+  "scripts": {
+    "lint": "eslint ./*",
+    "test": "NODE_ENV=test nyc --reporter=lcov  --reporter=text mocha --recursive ./test"
+  }
+}
