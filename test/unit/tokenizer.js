@@ -305,6 +305,251 @@ describe('Tokenizer', () => {
       assert.strictEqual(tokenizer.current.value, true);
     });
 
+    it('should parse nil token on nil', () => {
+      const tokenizer = new Tokenizer('nil');
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse nil terminated by white space', () => {
+      const tokenizer = new Tokenizer('nil and');
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should set error parsing nil terminated by "', () => {
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('nil"asdf"');
+        tokenizer.next();
+      }, errors.ParserError);
+    });
+
+    it('should parse nil terminated by (', () => {
+      const tokenizer = new Tokenizer('nil(asdf');
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse nil terminated by )', () => {
+      const tokenizer = new Tokenizer('nil) and ');
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse nil terminated by ,', () => {
+      const tokenizer = new Tokenizer('nil,123]');
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse nil terminated by [', () => {
+      const tokenizer = new Tokenizer('nil[123');
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse nil terminated by ]', () => {
+      const tokenizer = new Tokenizer('nil] and');
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse nil preceded by white space', () => {
+      const tokenizer = new Tokenizer(' \u0085\u2004nil] and');
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse nil preceded by (', () => {
+      const tokenizer = new Tokenizer('(nil');
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse nil preceded by )', () => {
+      const tokenizer = new Tokenizer(')nil');
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse nil preceded by ,', () => {
+      const tokenizer = new Tokenizer(',nil');
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse nil preceded by [', () => {
+      const tokenizer = new Tokenizer('[nil');
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse nil preceded by ]', () => {
+      const tokenizer = new Tokenizer(']nil');
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse downstream nil terminated by white space', () => {
+      const tokenizer = new Tokenizer('/foo eq nil\u200D ');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should set error parsing downstream nil terminated by "', () => {
+      assert.throws(() => {
+        const tokenizer = new Tokenizer('/foo eq nil" "');
+        tokenizer.next();
+        tokenizer.next();
+        tokenizer.next();
+      }, errors.ParserError);
+    });
+
+    it('should parse downstream nil terminated by (', () => {
+      const tokenizer = new Tokenizer('/foo eq nil( 123');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse downstream nil terminated by )', () => {
+      const tokenizer = new Tokenizer('/foo eq nil) and 123');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse downstream nil terminated by ,', () => {
+      const tokenizer = new Tokenizer('/foo in [nil,12]) and 123');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse downstream nil terminated by [', () => {
+      const tokenizer = new Tokenizer('/foo eq nil[');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse downstream nil terminated by ]', () => {
+      const tokenizer = new Tokenizer('/foo in [12,nil] and');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse downstream nil preceded by white space', () => {
+      const tokenizer = new Tokenizer('/foo eq nil');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse downstream nil preceded by "', () => {
+      const tokenizer = new Tokenizer('/foo eq "test"nil');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse downstream nil preceded by (', () => {
+      const tokenizer = new Tokenizer('/foo eq "test"(nil ');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse downstream nil preceded by )', () => {
+      const tokenizer = new Tokenizer('/foo eq "test")nil ');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse downstream nil preceded by ,', () => {
+      const tokenizer = new Tokenizer('/foo in [123,nil]');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse downstream nil preceded by [', () => {
+      const tokenizer = new Tokenizer('/foo in [nil,123]');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
+    it('should parse downstream nil preceded by ]', () => {
+      const tokenizer = new Tokenizer('/foo in [123]nil');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.nil);
+      assert.strictEqual(tokenizer.current.value, null);
+    });
+
     it('should parse Boolean token on true', () => {
       const tokenizer = new Tokenizer('true');
       tokenizer.next();
