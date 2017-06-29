@@ -4,8 +4,6 @@
 
 Representing filter expressions across application layers is a pretty common problem.  Say we have a REST endpoint that accepts a filter, which is then deserialized, passed to your domain logic for processing, and then passed into your data access layer for querying information.  There are a couple of issues that come out of this scenario.  How is the filter expression formatted when it's passed in via an HTTP request?  How do we pass this expression to our domain logic and data access layers without leaking implementation details?  The `spleen` module seeks to solve these issues.
 
-There are a number of competing methods for solving this issue.  Most notably GraphQL and OData.  However, these tools are not suitable for all use cases.  The `spleen` module is ideally suited for RESTful and intent-based API designs, and requires minimal effort to implement.
-
 __Contents__
 
   * [Usage](#usage)
@@ -92,7 +90,7 @@ Expression strings use infix notation to maximize read and writability by humans
 [<conjunctive/> <clause/>] ...
 ```
 
-  * `<group> ... </group>` _(optional)_ A logical grouping of filter clauses.  This is useful when conjunctive normal form clauses are used with the individual evaluation of a series of disjunctive normal form clauses, and visa versa.
+  * `<group> ... </group>` _(optional)_ A logical grouping of filter clauses.
 
   * `<clause/>`: _(required)_ a statement that describes a filter condition.  Each statement must follow a specific form:
 
@@ -149,6 +147,8 @@ The following is a list of all possible values for the various types of terms us
     + `12345.67890`: a number value that can be either an integer or floating point.
 
     + `true` or `false`: a Boolean value.
+
+    + `nil`: a null literal value.
 
   * `<verb:compare/>`:
 
@@ -226,6 +226,12 @@ Field `bar` of field `foo` is not equal to string literal `"baz"`, and field `qu
 
 ```
 /foo/bar neq "baz" and /qux gte 42
+```
+
+Field `bar` of field `foo` is equal to `nil` (`null`).
+
+```
+/foo/bar eq nil
 ```
 
 The conditions field `bar` of field `foo` is not equal to string literal `"baz"` and field `qux` is greater than or equal to 42 must be true, or the field `quux` must start with `"Hello"`.
