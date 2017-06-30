@@ -45,7 +45,7 @@ Or define filter graphs directly (which is more efficient from a runtime perspec
 ```js
 const spleen = require('spleen');
 
-const Clause = filtering.Clause;
+const Clause = spleen.Clause;
 const Filter = spleen.Filter;
 
 const filter = Filter
@@ -326,7 +326,7 @@ The primary interface exposes all of the classes needed to build `spleen` filter
 
     + `spleen.Like`: gets a reference to the [`Like`](#class-like) class.
 
-    + `spleen.parse(value)` parses a string into an instance of `Filter`.  This method takes a single string argument which represents the filter.  If the filter is invalid, a `ParseError` is thrown.
+    + `spleen.parse(value)` parses a string into a parse result object. This method takes a single string argument which represents the filter.  If the filter is invalid, the return object's success property will be false and the error property will contain the error message. If the filter is valid, the return object's success property will be set to true and the value property will be set to an instance of `Filter`.  
 
     + `spleen.Range`: gets a reference to the [`Range`](#class-range) class.
 
