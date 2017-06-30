@@ -24,7 +24,7 @@ describe('Parser', () => {
       grault: 'b',
       garply: 'c',
       waldo: 'd',
-      fred: 'e',
+      fred: null,
       plugh: 'f',
     };
 
@@ -153,6 +153,12 @@ describe('Parser', () => {
       assert.strictEqual(object.path[1], 'baz');
     });
 
+    it('should parse nil literal for eq', () => {
+      const parser = new Parser('/foo/bar/74 eq nil');
+      const filter = parser.parse().value;
+      assert.isNull(filter.statements[0].value.object);
+    });
+
     it('should parse string object for eq', () => {
       const value = 'b\tlo\nrg';
       const parser = new Parser(`/foo/bar/74 eq "${value}"`);
@@ -188,6 +194,12 @@ describe('Parser', () => {
       assert.lengthOf(object.path, 2);
       assert.strictEqual(object.path[0], 'bar');
       assert.strictEqual(object.path[1], 'baz');
+    });
+
+    it('should parse nil literal for neq', () => {
+      const parser = new Parser('/foo/bar/74 neq nil');
+      const filter = parser.parse().value;
+      assert.isNull(filter.statements[0].value.object);
     });
 
     it('should parse string object for neq', () => {
@@ -227,6 +239,12 @@ describe('Parser', () => {
       assert.strictEqual(object.path[1], 'baz');
     });
 
+    it('should parse nil literal for gt', () => {
+      const parser = new Parser('/foo/bar/74 gt nil');
+      const filter = parser.parse().value;
+      assert.isNull(filter.statements[0].value.object);
+    });
+
     it('should parse string object for gt', () => {
       const value = 'b\tlo\nrg';
       const parser = new Parser(`/foo/bar/74 gt "${value}"`);
@@ -262,6 +280,12 @@ describe('Parser', () => {
       assert.lengthOf(object.path, 2);
       assert.strictEqual(object.path[0], 'bar');
       assert.strictEqual(object.path[1], 'baz');
+    });
+
+    it('should parse nil literal for gte', () => {
+      const parser = new Parser('/foo/bar/74 gte nil');
+      const filter = parser.parse().value;
+      assert.isNull(filter.statements[0].value.object);
     });
 
     it('should parse string object for gte', () => {
@@ -301,6 +325,12 @@ describe('Parser', () => {
       assert.strictEqual(object.path[1], 'baz');
     });
 
+    it('should parse nil literal for lt', () => {
+      const parser = new Parser('/foo/bar/74 lt nil');
+      const filter = parser.parse().value;
+      assert.isNull(filter.statements[0].value.object);
+    });
+
     it('should parse string object for lt', () => {
       const value = 'b\tlo\nrg';
       const parser = new Parser(`/foo/bar/74 lt "${value}"`);
@@ -338,6 +368,12 @@ describe('Parser', () => {
       assert.strictEqual(object.path[1], 'baz');
     });
 
+    it('should parse nil literal for lte', () => {
+      const parser = new Parser('/foo/bar/74 lte nil');
+      const filter = parser.parse().value;
+      assert.isNull(filter.statements[0].value.object);
+    });
+
     it('should parse string object for lte', () => {
       const value = 'b\tlo\nrg';
       const parser = new Parser(`/foo/bar/74 lte "${value}"`);
@@ -371,6 +407,20 @@ describe('Parser', () => {
       const object = filter.statements[0].value.object;
       assert.isArray(object);
       assert.lengthOf(object, 0);
+    });
+
+    it('should parse nil array object for in', () => {
+      const parser = new Parser('/foo/bar in [nil]');
+      const filter = parser.parse().value;
+      const value = [null];
+      assert.deepEqual(filter.statements[0].value.object, value);
+    });
+
+    it('should parse nils array object for in', () => {
+      const parser = new Parser('/foo/bar in [nil,nil]');
+      const filter = parser.parse().value;
+      const value = [null, null];
+      assert.deepEqual(filter.statements[0].value.object, value);
     });
 
     it('should parse string array object for in', () => {
@@ -448,6 +498,20 @@ describe('Parser', () => {
       assert.lengthOf(object, 0);
     });
 
+    it('should parse nil array object for nin', () => {
+      const parser = new Parser('/foo/bar nin [nil]');
+      const filter = parser.parse().value;
+      const value = [null];
+      assert.deepEqual(filter.statements[0].value.object, value);
+    });
+
+    it('should parse nils array object for nin', () => {
+      const parser = new Parser('/foo/bar nin [nil,nil]');
+      const filter = parser.parse().value;
+      const value = [null, null];
+      assert.deepEqual(filter.statements[0].value.object, value);
+    });
+
     it('should parse string array object for nin', () => {
       const parser = new Parser('/foo/bar nin ["baz"]');
       const filter = parser.parse().value;
@@ -515,6 +579,12 @@ describe('Parser', () => {
       assert.instanceOf(result.error, errors.ParserError);
     });
 
+    it('should parse nil-lower range object for between', () => {
+      const parser = new Parser('/foo between nil,nil');
+      const filter = parser.parse().value;
+      assert.isNull(filter.statements[0].value.object.lower);
+    });
+
     it('should parse string-lower range object for between', () => {
       const parser = new Parser('/foo between "blorg","glorp"');
       const filter = parser.parse().value;
@@ -527,6 +597,12 @@ describe('Parser', () => {
       assert.strictEqual(filter.statements[0].value.object.lower, -42);
     });
 
+    it('should parse nil-upper range object for between', () => {
+      const parser = new Parser('/foo between nil,nil');
+      const filter = parser.parse().value;
+      assert.isNull(filter.statements[0].value.object.upper);
+    });
+
     it('should parse string-upper range object for between', () => {
       const parser = new Parser('/foo between "blorg","glorp"');
       const filter = parser.parse().value;
@@ -537,6 +613,38 @@ describe('Parser', () => {
       const parser = new Parser('/foo between -42,42');
       const filter = parser.parse().value;
       assert.strictEqual(filter.statements[0].value.object.upper, 42);
+    });
+
+    it('should parse nil,string range object for between', () => {
+      const parser = new Parser('/foo between nil,"blorg"');
+      const filter = parser.parse().value;
+      const object = filter.statements[0].value.object;
+      assert.strictEqual(object.lower, null);
+      assert.strictEqual(object.upper, 'blorg');
+    });
+
+    it('should parse string,nil range object for between', () => {
+      const parser = new Parser('/foo between "blorg",nil');
+      const filter = parser.parse().value;
+      const object = filter.statements[0].value.object;
+      assert.strictEqual(object.lower, 'blorg');
+      assert.strictEqual(object.upper, null);
+    });
+
+    it('should parse nil,number range object for between', () => {
+      const parser = new Parser('/foo between nil,42');
+      const filter = parser.parse().value;
+      const object = filter.statements[0].value.object;
+      assert.strictEqual(object.lower, null);
+      assert.strictEqual(object.upper, 42);
+    });
+
+    it('should parse number,nil range object for between', () => {
+      const parser = new Parser('/foo between 42,nil');
+      const filter = parser.parse().value;
+      const object = filter.statements[0].value.object;
+      assert.strictEqual(object.lower, null);
+      assert.strictEqual(object.upper, 42);
     });
 
     it('should parse string,number range object for between', () => {
@@ -576,6 +684,12 @@ describe('Parser', () => {
       assert.instanceOf(result.error, errors.ParserError);
     });
 
+    it('should parse nil-lower range object for nbetween', () => {
+      const parser = new Parser('/foo nbetween nil,nil');
+      const filter = parser.parse().value;
+      assert.isNull(filter.statements[0].value.object.lower);
+    });
+
     it('should parse string-lower range object for nbetween', () => {
       const parser = new Parser('/foo nbetween "blorg","glorp"');
       const filter = parser.parse().value;
@@ -588,6 +702,12 @@ describe('Parser', () => {
       assert.strictEqual(filter.statements[0].value.object.lower, -42);
     });
 
+    it('should parse nil-upper range object for nbetween', () => {
+      const parser = new Parser('/foo nbetween nil,nil');
+      const filter = parser.parse().value;
+      assert.isNull(filter.statements[0].value.object.upper);
+    });
+
     it('should parse string-upper range object for nbetween', () => {
       const parser = new Parser('/foo nbetween "blorg","glorp"');
       const filter = parser.parse().value;
@@ -598,6 +718,38 @@ describe('Parser', () => {
       const parser = new Parser('/foo nbetween -42,42');
       const filter = parser.parse().value;
       assert.strictEqual(filter.statements[0].value.object.upper, 42);
+    });
+
+    it('should parse nil,string range object for nbetween', () => {
+      const parser = new Parser('/foo nbetween nil,"blorg"');
+      const filter = parser.parse().value;
+      const object = filter.statements[0].value.object;
+      assert.strictEqual(object.lower, null);
+      assert.strictEqual(object.upper, 'blorg');
+    });
+
+    it('should parse string,nil range object for nbetween', () => {
+      const parser = new Parser('/foo nbetween "blorg",nil');
+      const filter = parser.parse().value;
+      const object = filter.statements[0].value.object;
+      assert.strictEqual(object.lower, 'blorg');
+      assert.strictEqual(object.upper, null);
+    });
+
+    it('should parse nil,number range object for nbetween', () => {
+      const parser = new Parser('/foo nbetween nil,42');
+      const filter = parser.parse().value;
+      const object = filter.statements[0].value.object;
+      assert.strictEqual(object.lower, null);
+      assert.strictEqual(object.upper, 42);
+    });
+
+    it('should parse number,nil range object for nbetween', () => {
+      const parser = new Parser('/foo nbetween 42,nil');
+      const filter = parser.parse().value;
+      const object = filter.statements[0].value.object;
+      assert.strictEqual(object.lower, null);
+      assert.strictEqual(object.upper, 42);
     });
 
     it('should parse string,number range object for nbetween', () => {
@@ -664,7 +816,7 @@ describe('Parser', () => {
     });
 
     it('should join clause and clause', () => {
-      const parser = new Parser('/foo gt 42 and /bar in [1,2,"3"]');
+      const parser = new Parser('/foo gt 42 and /bar in [1,nil,"3"]');
       const filter = parser.parse().value;
       const a = filter.statements[0];
       const b = filter.statements[1];
@@ -697,7 +849,7 @@ describe('Parser', () => {
     });
 
     it('should join clause or clause or clause', () => {
-      const parser = new Parser('/foo gt 42 or /bar in [1,2] or /baz neq 2');
+      const parser = new Parser('/foo gt nil or /bar in [1,2] or /baz neq 2');
       const filter = parser.parse().value;
       const a = filter.statements[0];
       const b = filter.statements[1];
@@ -922,7 +1074,7 @@ describe('Parser', () => {
     });
 
     it('should fail if group not closed', () => {
-      const parser = new Parser('(/foo eq /bar and /baz lt 9 or /qux gt 0');
+      const parser = new Parser('(/foo eq /bar and /baz lt 9 or /qux gt nil');
       const result = parser.parse();
       assert.isFalse(result.success);
       assert.instanceOf(result.error, errors.ParserError);
@@ -1081,6 +1233,15 @@ describe('Parser', () => {
       assert.isTrue(filter.match(src));
     });
 
+    it('should match true on {true&true | false&true | true&false}', () => {
+      const val = `   /foo eq 1 and /bar eq 2
+                   or /corge eq 1 and /baz eq 3
+                   or /fred eq nil and /grault eq 2`;
+      const parser = new Parser(val);
+      const filter = parser.parse().value;
+      assert.isTrue(filter.match(src));
+    });
+
     it('should match true on {false&true | true&true | true&false}', () => {
       const val = `/corge eq 1 and /foo eq 1
                 or /bar eq 2 and /baz eq 3
@@ -1090,8 +1251,26 @@ describe('Parser', () => {
       assert.isTrue(filter.match(src));
     });
 
+    it('should match true on {false&true | true&true | true&false}', () => {
+      const val = `/corge eq 1 and /foo eq 1
+                or /fred eq nil and /baz eq 3
+                or /qux eq 4 and /grault eq 2`;
+      const parser = new Parser(val);
+      const filter = parser.parse().value;
+      assert.isTrue(filter.match(src));
+    });
+
     it('should match true on {true&false | false&true | true&true}', () => {
       const val = `/foo eq 1 and /corge eq 1
+                or /grault eq 2 and /bar eq 2
+                or /baz eq 3 and /qux eq 4`;
+      const parser = new Parser(val);
+      const filter = parser.parse().value;
+      assert.isTrue(filter.match(src));
+    });
+
+    it('should match true on {true&false | false&true | true&true}', () => {
+      const val = `/foo eq 1 and /fred eq nil
                 or /grault eq 2 and /bar eq 2
                 or /baz eq 3 and /qux eq 4`;
       const parser = new Parser(val);
@@ -1108,9 +1287,27 @@ describe('Parser', () => {
       assert.isFalse(filter.match(src));
     });
 
+    it('should match false on {false&true | true&false | false&false}', () => {
+      const val = `/fred eq 1 and /foo eq 1
+                or /bar eq 2 and /grault eq 2
+                or /garply eq 3 and /waldo eq 4`;
+      const parser = new Parser(val);
+      const filter = parser.parse().value;
+      assert.isFalse(filter.match(src));
+    });
+
     it('should match false on {false | true&true&false | false}', () => {
       const val = `/corge eq 1
                 or /foo eq 1 and /bar eq 1 and /grault eq 2
+                or /garply eq 3`;
+      const parser = new Parser(val);
+      const filter = parser.parse().value;
+      assert.isFalse(filter.match(src));
+    });
+
+    it('should match false on {false | true&true&false | false}', () => {
+      const val = `/corge eq 1
+                or /fred eq nil and /bar eq 1 and /grault eq 2
                 or /garply eq 3`;
       const parser = new Parser(val);
       const filter = parser.parse().value;

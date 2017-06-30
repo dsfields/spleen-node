@@ -4,8 +4,6 @@
 
 Representing filter expressions across application layers is a pretty common problem.  Say we have a REST endpoint that accepts a filter, which is then deserialized, passed to your domain logic for processing, and then passed into your data access layer for querying information.  There are a couple of issues that come out of this scenario.  How is the filter expression formatted when it's passed in via an HTTP request?  How do we pass this expression to our domain logic and data access layers without leaking implementation details?  The `spleen` module seeks to solve these issues.
 
-There are a number of competing methods for solving this issue.  Most notably GraphQL and OData.  However, these tools are not suitable for all use cases.  The `spleen` module is ideally suited for RESTful and intent-based API designs, and requires minimal effort to implement.
-
 __Contents__
 
   * [Usage](#usage)
@@ -22,6 +20,7 @@ __Contents__
     + [Class: `Range`](#class-range)
     + [Class: `Target`](#class-target)
   * [Conversions](#conversions)
+  * [Motivation](#motivation)
 
 ## Usage
 
@@ -46,7 +45,7 @@ Or define filter graphs directly (which is more efficient from a runtime perspec
 ```js
 const spleen = require('spleen');
 
-const Clause = filtering.Clause;
+const Clause = spleen.Clause;
 const Filter = spleen.Filter;
 
 const filter = Filter
@@ -92,7 +91,7 @@ Expression strings use infix notation to maximize read and writability by humans
 [<conjunctive/> <clause/>] ...
 ```
 
-  * `<group> ... </group>` _(optional)_ A logical grouping of filter clauses.  This is useful when conjunctive normal form clauses are used with the individual evaluation of a series of disjunctive normal form clauses, and visa versa.
+  * `<group> ... </group>` _(optional)_ A logical grouping of filter clauses.
 
   * `<clause/>`: _(required)_ a statement that describes a filter condition.  Each statement must follow a specific form:
 
@@ -149,6 +148,8 @@ The following is a list of all possible values for the various types of terms us
     + `12345.67890`: a number value that can be either an integer or floating point.
 
     + `true` or `false`: a Boolean value.
+
+    + `nil`: a null literal value.
 
   * `<verb:compare/>`:
 
@@ -226,6 +227,12 @@ Field `bar` of field `foo` is not equal to string literal `"baz"`, and field `qu
 
 ```
 /foo/bar neq "baz" and /qux gte 42
+```
+
+Field `bar` of field `foo` is equal to `nil` (`null`).
+
+```
+/foo/bar eq nil
 ```
 
 The conditions field `bar` of field `foo` is not equal to string literal `"baz"` and field `qux` is greater than or equal to 42 must be true, or the field `quux` must start with `"Hello"`.
@@ -319,7 +326,7 @@ The primary interface exposes all of the classes needed to build `spleen` filter
 
     + `spleen.Like`: gets a reference to the [`Like`](#class-like) class.
 
-    + `spleen.parse(value)` parses a string into an instance of `Filter`.  This method takes a single string argument which represents the filter.  If the filter is invalid, a `ParseError` is thrown.
+    + `spleen.parse(value)` parses a string into a parse result object. This method takes a single string argument which represents the filter.  If the filter is invalid, the return object's success property will be false and the error property will contain the error message. If the filter is valid, the return object's success property will be set to true and the value property will be set to an instance of `Filter`.  
 
     + `spleen.Range`: gets a reference to the [`Range`](#class-range) class.
 
@@ -586,3 +593,37 @@ Represents a reference to a field on an object being filtered.
 One of the goals of `spleen` is to provide a high-level abstraction for filter expressions.  The idea is to provide a DSL that can be consistently used across application layers without leaking implementation details.  Each layer in the application is then responsible for consuming a `spleen` filter expression in its own way.
 
 In the case of a data access layer, this typically means converting a `Filter` instance into some flavor of SQL.  For now, there is a single plugin available for accomplishing this end: [spleen-n1ql](https://www.npmjs.com/package/spleen-n1ql) (for now).
+
+## Motivation
+
+Representing complex filter expressions is a fairly common problem for API developers.  There are a variety of methods commonly used by teams, and they all have their pros and cons...
+
+* Use the query string to pass in filter criteria.<br />
+  __Pros:__ Very easy to implement. Universally understood.<br />
+  __Cons:__ Query strings have no native way of specifying comparison operators.  This makes it difficult to make your APIs idiomatic.
+
+* Expose the underlying query language used by your database.  Drawbacks:<br />
+  __Pros:__ Can provide a lot of power.  Little to no effort to implement.<br />
+  __Cons:__ It leaks internal implementation details.  It's difficult to secure.
+
+* Build a custom filter dialect and parser.<br />
+  __Pros:__ Greater control over the software.<br />
+  __Cons:__ Teams often make these tools domain-specific.  They are complex and time-consuming to build.  Closed-source solutions do not benefit from a larger community of people and companies testing and contributing to the project.
+
+* Use frameworks for querying languages such as GraphQL and OData.<br />
+  __Pros:__ Very robust.  Support for full ad-hoc querying.<br />
+  __Cons:__ Represents a broader system design.  May not be practical for use in existing systems built on intent-based design (like REST).  Built around opinionated frameworks that can be complicated to implement.
+
+The `spleen` module addresses these challenges wtih the following goals in minds:
+
+* No strong opinions.  The `spleen` module is a library, and does not insist upon any broader design patterns.
+
+* Can be implemented with minimal effort.
+
+* Supports complex filters with support for a variety of comparison operators, functions, and conjunctions.
+
+* Provides an abstraction around the issue of filtering data.
+
+* Domain agnostic.
+
+* Allows API endpoints to utilize a single query parameter for filtering.  This makes your APIs more idiomatic, and your code simpler.

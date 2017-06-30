@@ -145,9 +145,33 @@ describe('Clause', () => {
 
 
   describe('#literal (static)', () => {
-    it('should throw if value not string, number, or Boolean', () => {
+    it('should throw if value not string, number, Boolean, or null', () => {
       assert.throws(() => {
         Clause.literal({});
+      }, TypeError);
+    });
+
+    it('should accept string value', () => {
+      assert.doesNotThrow(() => {
+        Clause.literal('foo');
+      }, TypeError);
+    });
+
+    it('should accept number value', () => {
+      assert.doesNotThrow(() => {
+        Clause.literal(42);
+      }, TypeError);
+    });
+
+    it('should accept Boolean value', () => {
+      assert.doesNotThrow(() => {
+        Clause.literal(false);
+      }, TypeError);
+    });
+
+    it('should accept null value', () => {
+      assert.doesNotThrow(() => {
+        Clause.literal(null);
       }, TypeError);
     });
 
@@ -1353,9 +1377,33 @@ describe('Clause', () => {
 
 
   describe('#literal', () => {
-    it('should throw if value not string, number, or Boolean', () => {
+    it('should throw if value not string, number, Boolean, or null', () => {
       assert.throws(() => {
         Clause.target('/foo').eq().literal({});
+      }, TypeError);
+    });
+
+    it('should accept string for value', () => {
+      assert.doesNotThrow(() => {
+        Clause.target('/foo').eq().literal('foo');
+      }, TypeError);
+    });
+
+    it('should accept number for value', () => {
+      assert.doesNotThrow(() => {
+        Clause.target('/foo').eq().literal(42);
+      }, TypeError);
+    });
+
+    it('should accept Boolean for value', () => {
+      assert.doesNotThrow(() => {
+        Clause.target('/foo').eq().literal(true);
+      }, TypeError);
+    });
+
+    it('should accept null for value', () => {
+      assert.doesNotThrow(() => {
+        Clause.target('/foo').eq().literal(null);
       }, TypeError);
     });
 
@@ -1442,7 +1490,7 @@ describe('Clause', () => {
     });
 
     it('should set object to array', () => {
-      const array = [42, 'foo', 3.14, false, 'bar'];
+      const array = [null, 'foo', 3.14, false, 'bar'];
       const clause = Clause.target('/foo').in().array(array);
       assert.strictEqual(clause.object, array);
     });
@@ -1512,15 +1560,15 @@ describe('Clause', () => {
 
 
   describe('#range', () => {
-    it('should throw if lower not string or number', () => {
+    it('should throw if lower not string, number, or null', () => {
       assert.throws(() => {
         Clause.target('/foo').between().range(false, 42);
       }, TypeError);
     });
 
-    it('should throw if upper not string or number', () => {
+    it('should throw if upper not string, number, or null', () => {
       assert.throws(() => {
-        Clause.target('/foo').nmbetween().range(42, {});
+        Clause.target('/foo').nmbetween().range(null, {});
       }, TypeError);
     });
 
@@ -2114,7 +2162,7 @@ describe('Clause', () => {
       const result = Clause
         .target('/foo')
         .in()
-        .array([42, 'foo', false, 3.14, 'bar'])
+        .array([null, 'foo', false, 3.14, 'bar'])
         .match({ foo: 3.14 });
 
       assert.isTrue(result);
@@ -2122,9 +2170,9 @@ describe('Clause', () => {
 
     it('should be true on in match from literal', () => {
       const result = Clause
-        .literal('foo')
+        .literal(null)
         .in()
-        .array([42, 'foo', false, 3.14, 'bar'])
+        .array([null, 'foo', false, 3.14, 'bar'])
         .match();
 
       assert.isTrue(result);
@@ -2134,7 +2182,7 @@ describe('Clause', () => {
       const result = Clause
         .target('/foo')
         .in()
-        .array([42, 'foo', false, 3.14, 'bar'])
+        .array([null, 'foo', false, 3.14, 'bar'])
         .match({ foo: true });
 
       assert.isFalse(result);
@@ -2144,7 +2192,7 @@ describe('Clause', () => {
       const result = Clause
         .literal(1.6)
         .in()
-        .array([42, 'foo', false, 3.14, 'bar'])
+        .array([null, 'foo', false, 3.14, 'bar'])
         .match();
 
       assert.isFalse(result);
@@ -2154,7 +2202,7 @@ describe('Clause', () => {
       const result = Clause
         .target('/foo')
         .in()
-        .array([42, 'foo', false, 3.14, 'bar'])
+        .array([null, 'foo', false, 3.14, 'bar'])
         .match({ bar: 'bar' });
 
       assert.isFalse(result);
@@ -2164,7 +2212,7 @@ describe('Clause', () => {
       const result = Clause
         .target('/foo')
         .in()
-        .array([42, 'foo', false, 3.14, 'bar'])
+        .array([null, 'foo', false, 3.14, 'bar'])
         .match();
 
       assert.isFalse(result);
@@ -2174,7 +2222,7 @@ describe('Clause', () => {
       const result = Clause
         .target('/foo')
         .nin()
-        .array([42, 'foo', false, 3.14, 'bar'])
+        .array([null, 'foo', false, 3.14, 'bar'])
         .match({ foo: 'baz' });
 
       assert.isTrue(result);
@@ -2184,7 +2232,7 @@ describe('Clause', () => {
       const result = Clause
         .literal('baz')
         .nin()
-        .array([42, 'foo', false, 3.14, 'bar'])
+        .array([null, 'foo', false, 3.14, 'bar'])
         .match();
 
       assert.isTrue(result);
@@ -2214,7 +2262,7 @@ describe('Clause', () => {
       const result = Clause
         .target('/foo')
         .nin()
-        .array([42, 'foo', false, 3.14, 'bar'])
+        .array([null, 'foo', false, 3.14, 'bar'])
         .match({ bar: 'foo' });
 
       assert.isTrue(result);
@@ -2224,7 +2272,7 @@ describe('Clause', () => {
       const result = Clause
         .target('/foo')
         .nin()
-        .array([42, 'foo', false, 3.14, 'bar'])
+        .array([null, 'foo', false, 3.14, 'bar'])
         .match();
 
       assert.isTrue(result);
@@ -2533,6 +2581,26 @@ describe('Clause', () => {
       assert.strictEqual(result, '42%20eq%20/bar%26');
     });
 
+    it('should stringify null subject and target object', () => {
+      const result = Clause
+        .literal(null)
+        .eq()
+        .target('/bar')
+        .toString();
+
+      assert.strictEqual(result, 'nil eq /bar');
+    });
+
+    it('should URL encode stringify null subject and target object', () => {
+      const result = Clause
+        .literal(null)
+        .eq()
+        .target('/bar&')
+        .toString(true);
+
+      assert.strictEqual(result, 'nil%20eq%20/bar%26');
+    });
+
     it('should stringify Boolean subject and target object', () => {
       const result = Clause
         .literal(true)
@@ -2593,6 +2661,26 @@ describe('Clause', () => {
       assert.strictEqual(result, '/foo%3F%20eq%2042');
     });
 
+    it('should stringify target subject and null object', () => {
+      const result = Clause
+        .target('/foo')
+        .eq()
+        .literal(null)
+        .toString();
+
+      assert.strictEqual(result, '/foo eq nil');
+    });
+
+    it('should URL encode stringify target subject and null object', () => {
+      const result = Clause
+        .target('/foo?')
+        .eq()
+        .literal(null)
+        .toString(true);
+
+      assert.strictEqual(result, '/foo%3F%20eq%20nil');
+    });
+
     it('should stringify target subject and Boolean object', () => {
       const result = Clause
         .target('/foo')
@@ -2643,7 +2731,7 @@ describe('Clause', () => {
       assert.strictEqual(result, '42 eq 42');
     });
 
-    it('should URL encode stringify string subject and number object', () => {
+    it('should URL encode stringify number subject and number object', () => {
       const result = Clause
         .literal(42)
         .eq()
@@ -2653,7 +2741,27 @@ describe('Clause', () => {
       assert.strictEqual(result, '42%20eq%2042');
     });
 
-    it('should stringify string subject and Boolean object', () => {
+    it('should stringify null subject and null object', () => {
+      const result = Clause
+        .literal(null)
+        .eq()
+        .literal(null)
+        .toString();
+
+      assert.strictEqual(result, 'nil eq nil');
+    });
+
+    it('should URL encode stringify null subject and null object', () => {
+      const result = Clause
+        .literal(null)
+        .eq()
+        .literal(null)
+        .toString(true);
+
+      assert.strictEqual(result, 'nil%20eq%20nil');
+    });
+
+    it('should stringify Boolean subject and Boolean object', () => {
       const result = Clause
         .literal(false)
         .eq()
@@ -2663,7 +2771,7 @@ describe('Clause', () => {
       assert.strictEqual(result, 'false eq true');
     });
 
-    it('should URL encode stringify string subject and Boolean object', () => {
+    it('should URL encode stringify Boolean subject and Boolean object', () => {
       const result = Clause
         .literal(true)
         .eq()
