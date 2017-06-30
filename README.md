@@ -20,6 +20,7 @@ __Contents__
     + [Class: `Range`](#class-range)
     + [Class: `Target`](#class-target)
   * [Conversions](#conversions)
+  * [Motivation](#motivation)
 
 ## Usage
 
@@ -592,3 +593,37 @@ Represents a reference to a field on an object being filtered.
 One of the goals of `spleen` is to provide a high-level abstraction for filter expressions.  The idea is to provide a DSL that can be consistently used across application layers without leaking implementation details.  Each layer in the application is then responsible for consuming a `spleen` filter expression in its own way.
 
 In the case of a data access layer, this typically means converting a `Filter` instance into some flavor of SQL.  For now, there is a single plugin available for accomplishing this end: [spleen-n1ql](https://www.npmjs.com/package/spleen-n1ql) (for now).
+
+## Motivation
+
+Representing complex filter expressions is a fairly common problem for API developers.  There are a variety of methods commonly used by teams, and they all have their pros and cons...
+
+* Use the query string to pass in filter criteria.<br />
+  __Pros:__ Very easy to implement. Universally understood.<br />
+  __Cons:__ Query strings have no native way of specifying comparison operators.  This makes it difficult to make your APIs idiomatic.
+
+* Expose the underlying query language used by your database.  Drawbacks:<br />
+  __Pros:__ Can provide a lot of power.  Little to no effort to implement.<br />
+  __Cons:__ It leaks internal implementation details.  It's difficult to secure.
+
+* Build a custom filter dialect and parser.<br />
+  __Pros:__ Greater control over the software.<br />
+  __Cons:__ Teams often make these tools domain-specific.  They are complex and time-consuming to build.  Closed-source solutions do not benefit from a larger community of people and companies testing and contributing to the project.
+
+* Use frameworks for querying languages such as GraphQL and OData.<br />
+  __Pros:__ Very robust.  Support for full ad-hoc querying.<br />
+  __Cons:__ Represents a broader system design.  May not be practical for use in existing systems built on intent-based design (like REST).  Built around opinionated frameworks that can be complicated to implement.
+
+The `spleen` module addresses these challenges wtih the following goals in minds:
+
+* No strong opinions.  The `spleen` module is a library, and does not insist upon any broader design patterns.
+
+* Can be implemented with minimal effort.
+
+* Supports complex filters with support for a variety of comparison operators, functions, and conjunctions.
+
+* Provides an abstraction around the issue of filtering data.
+
+* Domain agnostic.
+
+* Allows API endpoints to utilize a single query parameter for filtering.  This makes your APIs more idiomatic, and your code simpler.
