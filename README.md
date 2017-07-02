@@ -326,7 +326,19 @@ The primary interface exposes all of the classes needed to build `spleen` filter
 
     + `spleen.Like`: gets a reference to the [`Like`](#class-like) class.
 
-    + `spleen.parse(value)` parses a string into a parse result object. This method takes a single string argument which represents the filter.  If the filter is invalid, the return object's success property will be false and the error property will contain the error message. If the filter is valid, the return object's success property will be set to true and the value property will be set to an instance of `Filter`.  
+    + `spleen.parse(value)` parses a string, and converts it into an instance of [`Filter`](#class-filter).
+    
+      _Parameters_
+
+      - `value`: a string representing a `spleen` expression.
+
+      This method returns an object with the following keys:
+
+      - `error`: if `value` was in invalid `spleen` expression, this key will be an instance of `ParserError` with additional information about why the failure occured.
+
+      - `filter`: if parsing was successful, this key is an instance of `Filter`.
+
+      - `success`: a Boolean value indicating whether or not parsing was successful.
 
     + `spleen.Range`: gets a reference to the [`Range`](#class-range) class.
 
@@ -502,6 +514,28 @@ Represents the graph structure of a `spleen` filter.
 
       This method returns a Boolean value indicating whether or not there was a match.
 
+    + `Filter.prototype.prioritize(priorities [, options])`: creates a shallow copy of the `Filter` instance, and reorders all statements to align with a given list of field targets that is ordered by priority.
+
+      _Parameters_
+
+      - `priorities`: _(required)_ an array of field targets in RFC 6901 format.  The array should be in priority order, from most important (index 0) to least important (index length--).  Each entry can be a string in RFC 6901 format, or an object with the following keys:
+
+        - `target`: a string in RFC 6901 format.
+
+        - `label`: allows field targets to be labelled and grouped together.  The `prioritize()` method's result will include a list of labels that correlate to field targets used in the `Filter` instance.  A `label` can be used for more than one `target`.
+      
+      - `options`: _(optional)_ an object with the following keys:
+
+        - `precedence`: _(optional)_ a string that can be either `and` or `or` (case insensitve).  This dictates how an expression should be evaluated, and, consequently, how statements within a `Filter` can be reoranized.
+
+        - `matchAllLabels`: _(optional)_ a Boolean value indicating whether or not all fields should exist in a `Filter` instance to constitute a "match" of a label provided in the list of `priorities`.  The default is `false`.
+
+      This method returns an object with the following fields:
+
+      - `filter`: the new `Filter` instance.
+
+      - `labels`: an array of labels used in the filter.  These come from a `label` value passed in via the `priorities` parameter.  This is especially useful if `label` values are index names.  This gives insight into what database indexes a `Filter` instance may particpate in.  This becomes key information when `spleen` is used with database engines that utilize index hinting.
+
     + `Filter.prototype.or(clause | filter)`: appends an instance of `Clause` or the statemetns within a `Filter` to the `Filter`'s list of statements using an "or" conjunctive.
 
       _Parameters_
@@ -600,19 +634,19 @@ Representing complex filter expressions is a fairly common problem for API devel
 
 * Use the query string to pass in filter criteria.<br />
   __Pros:__ Very easy to implement. Universally understood.<br />
-  __Cons:__ Query strings have no native way of specifying comparison operators.  This makes it difficult to make your APIs idiomatic.
+  __Cons:__ Query strings have no native way of specifying comparison operators.  Difficult to make APIs idiomatic.
 
-* Expose the underlying query language used by your database.  Drawbacks:<br />
+* Expose the underlying query language used by your database.<br />
   __Pros:__ Can provide a lot of power.  Little to no effort to implement.<br />
-  __Cons:__ It leaks internal implementation details.  It's difficult to secure.
+  __Cons:__ Leaks internal implementation details.  Difficult to secure.
 
 * Build a custom filter dialect and parser.<br />
   __Pros:__ Greater control over the software.<br />
-  __Cons:__ Teams often make these tools domain-specific.  They are complex and time-consuming to build.  Closed-source solutions do not benefit from a larger community of people and companies testing and contributing to the project.
+  __Cons:__ Teams often make these tools domain-specific.  Complex and time-consuming to build.  Closed-source solutions do not benefit from a larger community of people and companies testing and contributing to the project.
 
 * Use frameworks for querying languages such as GraphQL and OData.<br />
   __Pros:__ Very robust.  Support for full ad-hoc querying.<br />
-  __Cons:__ Represents a broader system design.  May not be practical for use in existing systems built on intent-based design (like REST).  Built around opinionated frameworks that can be complicated to implement.
+  __Cons:__ Represents a broader system design.  May not be practical for use in existing systems built on an intent-based design (like REST).  Built around opinionated frameworks that can be complicated to implement.  Limited ability to optimize ad-hoc queries at runtime, and fully take advantage of database indexes.  Poorly designed user-specified queries can be used as a vector for DoS attacks.
 
 The `spleen` module addresses these challenges wtih the following goals in minds:
 
@@ -620,10 +654,12 @@ The `spleen` module addresses these challenges wtih the following goals in minds
 
 * Can be implemented with minimal effort.
 
-* Supports complex filters with support for a variety of comparison operators, functions, and conjunctions.
+* Enables complex filter logic with support for a variety of comparison operators, functions, and conjunctions.
 
 * Provides an abstraction around the issue of filtering data.
 
 * Domain agnostic.
 
 * Allows API endpoints to utilize a single query parameter for filtering.  This makes your APIs more idiomatic, and your code simpler.
+
+* Ability to prioritize user-defined filter clauses.  This allows implementers to generate efficient, index-aware queriess.
