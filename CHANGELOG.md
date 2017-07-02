@@ -2,6 +2,10 @@
 
 ## 1.0
 
+### 1.2.0
+
+  * Adding support to reorder filter statements based on priority via the new method `Filter.prototype.prioritize()`.
+
 ### 1.1.0
 
   * Adding support for the `nil` literal.
