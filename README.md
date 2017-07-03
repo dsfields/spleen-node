@@ -514,6 +514,26 @@ Represents the graph structure of a `spleen` filter.
 
       This method returns a Boolean value indicating whether or not there was a match.
 
+    + `Filter.prototype.or(clause | filter)`: appends an instance of `Clause` or the statemetns within a `Filter` to the `Filter`'s list of statements using an "or" conjunctive.
+
+      _Parameters_
+
+      - `clause`: _(required)_ an instance of `Clause`.
+
+      ...or...
+
+      - `filter` _(required)_ an instance of `Filter`.  If this overload is called, all of the statements for the given filter are concatonated onto the end of the `Filter` instance's statements.  All statements appended on are treated as individual statements, and not a single group.  The first statement in the joined filter is conjoined with an "or."
+
+      This method returns the `Filter` instance.
+
+    + `Filter.prototype.orGroup(filter)`: ands an instance of `Filter` as a single statement evaluated as a group.  The statement is joined to the previous statement with an "or."
+
+      _Parameters_
+
+      - `filter`: _(required)_ the instance of `Filter` to add as a group statement.
+
+      This method returns the `Filter` instance.
+
     + `Filter.prototype.prioritize(priorities [, options] | strategy)`: creates a shallow copy of the `Filter` instance, and reorders all statements to align with a given list of field targets that is ordered by priority.
 
       Reordered statements cannot always be made to be in perfect prioritization order.  This method will always return a `Filter` instance that is logically the same as the original.  For example...
@@ -539,7 +559,7 @@ Represents the graph structure of a `spleen` filter.
 
       ...or...
 
-      - `strategy`: _(required)_ an instance of [`PrioritizationStrategy`](#class-prioritizationstrategy).
+      - `strategy`: _(required)_ an instance of [`PrioritizeStrategy`](#class-prioritizestrategy).
 
       This method returns an object with the following fields:
 
@@ -547,25 +567,6 @@ Represents the graph structure of a `spleen` filter.
 
       - `labels`: an array of labels used in the filter.  These come from a `label` value passed in via the `priorities` parameter.  This is especially useful if `label` values are index names.  This gives insight into what database indexes a `Filter` instance may particpate in.  This becomes key information when `spleen` is used with database engines that utilize index hinting.
 
-    + `Filter.prototype.or(clause | filter)`: appends an instance of `Clause` or the statemetns within a `Filter` to the `Filter`'s list of statements using an "or" conjunctive.
-
-      _Parameters_
-
-      - `clause`: _(required)_ an instance of `Clause`.
-
-      ...or...
-
-      - `filter` _(required)_ an instance of `Filter`.  If this overload is called, all of the statements for the given filter are concatonated onto the end of the `Filter` instance's statements.  All statements appended on are treated as individual statements, and not a single group.  The first statement in the joined filter is conjoined with an "or."
-
-      This method returns the `Filter` instance.
-
-    + `Filter.prototype.orGroup(filter)`: ands an instance of `Filter` as a single statement evaluated as a group.  The statement is joined to the previous statement with an "or."
-
-      _Parameters_
-
-      - `filter`: _(required)_ the instance of `Filter` to add as a group statement.
-
-      This method returns the `Filter` instance.
 
     + `Filter.prototype.toString(urlEncode)`: returns a `spleen` filter expression.
 
@@ -593,13 +594,13 @@ Represents a "like" string matching expression.  This clause is used as the "obj
     
     This method returns a Boolean.
 
-#### Class: `PrioritizationStrategy`
+#### Class: `PrioritizeStrategy`
 
 A cache of computed information used to prioritize statements in a `Filter` instance.
 
   * __Methods__
 
-    + `PrioritizationStrategy.create(priorities [, options])`: builds a `PrioritizationStrategy`.
+    + `PrioritizeStrategy.create(priorities [, options])`: builds a `PrioritizeStrategy`.
 
       _Parameters_
 
