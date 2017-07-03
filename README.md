@@ -514,7 +514,14 @@ Represents the graph structure of a `spleen` filter.
 
       This method returns a Boolean value indicating whether or not there was a match.
 
-    + `Filter.prototype.prioritize(priorities [, options])`: creates a shallow copy of the `Filter` instance, and reorders all statements to align with a given list of field targets that is ordered by priority.
+    + `Filter.prototype.prioritize(priorities [, options] | strategy)`: creates a shallow copy of the `Filter` instance, and reorders all statements to align with a given list of field targets that is ordered by priority.
+
+      Reordered statements cannot always be made to be in perfect prioritization order.  This method will always return a `Filter` instance that is logically the same as the original.  For example...
+    
+      - Given the expression `/bar eq 2 or /baz eq 3 and /foo eq 1`
+      - A priority list of `['/foo', '/bar', '/baz']`
+      - And a conjuction precedence of `and` (the default)
+      - The result will be `/foo eq 1 and /baz eq 3 or /bar eq 2`
 
       _Parameters_
 
@@ -529,6 +536,10 @@ Represents the graph structure of a `spleen` filter.
         - `precedence`: _(optional)_ a string that can be either `and` or `or` (case insensitve).  This dictates how an expression should be evaluated, and, consequently, how statements within a `Filter` can be reoranized.
 
         - `matchAllLabels`: _(optional)_ a Boolean value indicating whether or not all fields should exist in a `Filter` instance to constitute a "match" of a label provided in the list of `priorities`.  The default is `false`.
+
+      ...or...
+
+      - `strategy`: _(required)_ an instance of [`PrioritizationStrategy`](#class-prioritizationstrategy).
 
       This method returns an object with the following fields:
 
@@ -581,6 +592,28 @@ Represents a "like" string matching expression.  This clause is used as the "obj
       - `value`: a string value to match.
     
     This method returns a Boolean.
+
+#### Class: `PrioritizationStrategy`
+
+A cache of computed information used to prioritize statements in a `Filter` instance.
+
+  * __Methods__
+
+    + `PrioritizationStrategy.create(priorities [, options])`: builds a `PrioritizationStrategy`.
+
+      _Parameters_
+
+      - `priorities`: _(required)_ an array of field targets in RFC 6901 format.  The array should be in priority order, from most important (index 0) to least important (index length--).  Each entry can be a string in RFC 6901 format, or an object with the following keys:
+
+          - `target`: a string in RFC 6901 format.
+
+          - `label`: allows field targets to be labelled and grouped together.  The `prioritize()` method's result will include a list of labels that correlate to field targets used in the `Filter` instance.  A `label` can be used for more than one `target`.
+        
+      - `options`: _(optional)_ an object with the following keys:
+
+        - `precedence`: _(optional)_ a string that can be either `and` or `or` (case insensitve).  This dictates how an expression should be evaluated, and, consequently, how statements within a `Filter` can be reoranized.
+
+        - `matchAllLabels`: _(optional)_ a Boolean value indicating whether or not all fields should exist in a `Filter` instance to constitute a "match" of a label provided in the list of `priorities`.  The default is `false`.
 
 #### Class: `Range`
 
