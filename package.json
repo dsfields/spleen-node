@@ -1,7 +1,7 @@
 {
   "name": "spleen",
   "longName": "spleen",
-  "description": "Filter expression parsing, formatting, and abstractions for Node.js.",
+  "description": "Filter expression parsing, formatting, and abstractions for web APIs.",
   "version": "1.2.0",
   "dependencies": {
     "elv": "^1.0.0"
