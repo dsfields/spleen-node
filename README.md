@@ -40,7 +40,7 @@ const expression = '/foo eq "bar" and /baz gt 42';
 const filter = spleen.parse(expression);
 ```
 
-Or define filter graphs directly (which is more efficient from a runtime perspective):
+Or define filter graphs directly (which is more efficient from a runtime performance perspective):
 
 ```js
 const spleen = require('spleen');
