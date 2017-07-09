@@ -178,10 +178,10 @@ describe('PrioritizeStrategy', () => {
       const strategy = PrioritizeStrategy.create(priorities);
 
       const p0 = priorities[0];
-      assert.isTrue(strategy.order.get(p0.target).labels.has(p0.label));
+      assert.include(strategy.order.get(p0.target).labels, p0.label);
 
       const p1 = priorities[1];
-      assert.isTrue(strategy.order.get(p1.target).labels.has(p1.label));
+      assert.include(strategy.order.get(p1.target).labels, p1.label);
     });
 
     it('should add entry for each unique label to #labels', () => {
