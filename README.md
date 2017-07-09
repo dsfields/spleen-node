@@ -1,8 +1,10 @@
 # spleen
 
-[![Build Status](https://secure.travis-ci.org/dsfields/spleen-node.svg)](https://travis-ci.org/dsfields/spleen-node) [![Coverage Status](https://coveralls.io/repos/github/dsfields/spleen-node/badge.svg?branch=master)](https://coveralls.io/github/dsfields/spleen-node?branch=master) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/225e499d664e4a3fa4e1fd7129ebbafd)](https://www.codacy.com/app/dsfields/spleen-node?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=dsfields/spleen-node&amp;utm_campaign=Badge_Grade) [![NSP Status](https://nodesecurity.io/orgs/dsfields/projects/23bbc1f8-ce1c-47d3-a01c-5d6198c9f619/badge)](https://nodesecurity.io/orgs/dsfields/projects/23bbc1f8-ce1c-47d3-a01c-5d6198c9f619)
+[![Build Status](https://secure.travis-ci.org/dsfields/spleen-node.svg)](https://travis-ci.org/dsfields/spleen-node) [![Coverage Status](https://coveralls.io/repos/github/dsfields/spleen-node/badge.svg?branch=master)](https://coveralls.io/github/dsfields/spleen-node?branch=master) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/225e499d664e4a3fa4e1fd7129ebbafd)](https://www.codacy.com/app/dsfields/spleen-node?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=dsfields/spleen-node&amp;utm_campaign=Badge_Grade) [![NSP Status](https://nodesecurity.io/orgs/dsfields/projects/23bbc1f8-ce1c-47d3-a01c-5d6198c9f619/badge)](https://nodesecurity.io/orgs/dsfields/projects/23bbc1f8-ce1c-47d3-a01c-5d6198c9f619) [![Known Vulnerabilities](https://snyk.io/test/github/dsfields/spleen-node/badge.svg)](https://snyk.io/test/github/dsfields/spleen-node)
 
-Representing filter expressions across application layers is a pretty common problem.  Say we have a REST endpoint that accepts a filter, which is then deserialized, passed to your domain logic for processing, and then passed into your data access layer for querying information.  There are a couple of issues that come out of this scenario.  How is the filter expression formatted when it's passed in via an HTTP request?  How do we pass this expression to our domain logic and data access layers without leaking implementation details?  The `spleen` module seeks to solve these issues.
+Easily add dynamic filtering to your application.
+
+Say we have a REST endpoint to a collection, and we need to provide a way for users to specify filter criteria when querying this collection.  This is a fairly common problem, and there are a couple of challenges that come out of this scenario.  How is the filter expression formatted when it's passed in via an HTTP request?  How do we pass this expression to our domain logic and data access layers without leaking implementation details?  The `spleen` module seeks to solve these challenges.
 
 __Contents__
 
@@ -664,7 +666,7 @@ In the case of a data access layer, this typically means converting a `Filter` i
 
 ## Motivation
 
-Representing complex filter expressions is a fairly common problem for API developers.  There are a variety of methods commonly used by teams, and they all have their pros and cons...
+Representing dynamic complex filter expressions is a fairly common problem for API developers.  There are a variety of methods commonly used by teams, and they all have their pros and cons...
 
 * Use the query string to pass in filter criteria.<br />
   __Pros:__ Very easy to implement. Universally understood.<br />
@@ -690,10 +692,10 @@ The `spleen` module addresses these challenges wtih the following goals in minds
 
 * Enables complex filter logic with support for a variety of comparison operators, functions, and conjunctions.
 
-* Provides an abstraction around the issue of filtering data.
+* Provides an abstraction around the issue of dynamically filtering data.
 
 * Domain agnostic.
 
 * Allows API endpoints to utilize a single query parameter for filtering.  This makes your APIs more idiomatic, and your code simpler.
 
-* Ability to prioritize user-defined filter clauses.  This allows implementers to generate efficient, index-aware queriess.
+* Ability to prioritize user-defined filter clauses.  This allows implementers to generate efficient, index-aware queries.
