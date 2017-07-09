@@ -699,3 +699,5 @@ The `spleen` module addresses these challenges wtih the following goals in minds
 * Allows API endpoints to utilize a single query parameter for filtering.  This makes your APIs more idiomatic, and your code simpler.
 
 * Ability to prioritize user-defined filter clauses.  This allows implementers to generate efficient, index-aware queries.
+
+* Provide plugins that help make database query commands secure.
