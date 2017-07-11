@@ -4,13 +4,18 @@
 
 ### 1.2.0
 
-  * Adding support to reorder filter statements based on priority via the new method `Filter.prototype.prioritize()`.
+__New Features__
+* Adding support to reorder filter statements based on priority via the new method `Filter.prototype.prioritize()`.
 
-  * Adding JSDoc documentation.
+* Adding JSDoc documentation.
+
+__Tech Debt__
+* Sanitizing some messy and redundant code.
 
 ### 1.1.0
 
-  * Adding support for the `nil` literal.
+__New Features__
+* Adding support for the `nil` literal.
 
 ### 1.0.0
   * Initial release.
