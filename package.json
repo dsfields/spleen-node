@@ -37,6 +37,6 @@
   },
   "scripts": {
     "lint": "eslint ./*",
-    "test": "NODE_ENV=test nyc --reporter=lcov  --reporter=text mocha --recursive ./test"
+    "test": "NODE_ENV=test nyc --reporter=lcov  --reporter=text --check-coverage --lines 100 --functions 100 --branches 100 mocha --recursive ./test"
   }
 }
