@@ -1,6 +1,7 @@
-module.exports = {
+{
   "extends": "airbnb",
   "plugins": [],
+  "root": true,
   "rules": {
     "arrow-body-style": 0,
     "comma-dangle": ["error", {
@@ -25,6 +26,6 @@ module.exports = {
     "prefer-spread": 0,
     "prefer-template": 0,
     "strict": 0,
-    "valid-typeof": 0,
+    "valid-typeof": 0
   }
-};
+}
