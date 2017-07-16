@@ -49,6 +49,11 @@ describe('MatchError', () => {
       const e = new errors.MatchError();
       assert.instanceOf(e, Error);
     });
+
+    it('should set name', () => {
+      const e = new errors.MatchError();
+      assert.strictEqual(e.name, 'MatchError');
+    });
   });
 
 });
@@ -97,6 +102,11 @@ describe('ParserError', () => {
     it('should be instanceof Error', () => {
       const e = new errors.ParserError();
       assert.instanceOf(e, Error);
+    });
+
+    it('should set name', () => {
+      const e = new errors.ParserError();
+      assert.strictEqual(e.name, 'ParserError');
     });
   });
 

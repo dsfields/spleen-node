@@ -4,7 +4,75 @@ const assert = require('chai').assert;
 
 const Clause = require('../../lib/clause');
 const Filter = require('../../lib/filter');
+const Like = require('../../lib/like');
+const parse = require('../../lib').parse;
+const PrioritizeStrategy = require('../../lib/prioritize-strategy');
+const Range = require('../../lib/range');
 const Target = require('../../lib/target');
+
+
+const targetsEqual = (a, b) => {
+  if (!(b instanceof Target) || a.path.length !== b.path.length) return false;
+
+  for (let i = 0; i < a.path.length; i++) {
+    if (a.path[i] !== b.path[i]) return false;
+  }
+
+  return true;
+};
+
+
+const rangesEqual = (a, b) => {
+  return b instanceof Range && a.lower === b.lower && a.upper === b.uper;
+};
+
+
+const likesEqual = (a, b) => {
+  return b instanceof Like && a.value === b.value;
+};
+
+
+const termsEqual = (a, b) => {
+  if (a instanceof Target) return targetsEqual(a, b);
+  if (a instanceof Range) return rangesEqual(a, b);
+  if (a instanceof Like) return likesEqual(a, b);
+  return a === b;
+};
+
+
+const filtersEqual = (a, b) => {
+  if (a.statements.length !== b.statements.length) return false;
+
+  for (let i = 0; i < a.statements.length; i++) {
+    const aState = a.statements[i];
+    const bState = b.statements[i];
+
+    if (aState.conjunctive !== bState.conjunctive) return false;
+
+    if (aState.value instanceof Filter) {
+      if (!(bState.value instanceof Filter)
+          || !filtersEqual(aState.value, bState.value)
+      )
+        return false;
+
+      continue;
+    }
+
+    if (aState.value instanceof Clause) {
+      if (!(bState.value instanceof Clause)
+          || !termsEqual(aState.value.subject, bState.value.subject)
+          || aState.value.operator !== bState.value.operator
+          || !termsEqual(aState.value.object, bState.value.object)
+      ) return false;
+
+      continue;
+    }
+
+    return false;
+  }
+
+  return true;
+};
 
 
 describe('Filter', () => {
@@ -1370,6 +1438,895 @@ describe('Filter', () => {
       const a = '(/foo%20gt%2042%20and%20/bar%20neq%20"a%3F")%20or%20/baz%20eq%20true';
       /* eslint-enable max-len */
       assert.strictEqual(result, a);
+    });
+  });
+
+
+  describe('#prioritize', () => {
+    it('should throw if priorities not array', () => {
+      assert.throws(() => {
+        const filter = Filter.where(Clause.literal(42).eq().literal(42));
+        filter.prioritize(42);
+      }, TypeError);
+    });
+
+    it('should throw if options not object', () => {
+      assert.throws(() => {
+        const filter = Filter.where(Clause.literal(42).eq().literal(42));
+        filter.prioritize(['/foo'], 42);
+      }, TypeError);
+    });
+
+    it('should throw if options not an object if provided', () => {
+      assert.throws(() => {
+        const filter = Filter.where(Clause.literal(42).eq().literal(42));
+        filter.prioritize([], 42);
+      }, TypeError);
+    });
+
+    it('should throw if options.precedence not a string', () => {
+      assert.throws(() => {
+        const filter = Filter.where(Clause.literal(42).eq().literal(42));
+        filter.prioritize([], { precedence: 42 });
+      }, TypeError);
+    });
+
+    it('should throw if options.precedence not "and" or "or"', () => {
+      assert.throws(() => {
+        const filter = Filter.where(Clause.literal(42).eq().literal(42));
+        filter.prioritize([], { precedence: 'nope' });
+      }, TypeError);
+    });
+
+    it('should not throw if options.precedence "and"', () => {
+      assert.doesNotThrow(() => {
+        const filter = Filter.where(Clause.literal(42).eq().literal(42));
+        filter.prioritize([], { precedence: 'and' });
+      }, TypeError);
+    });
+
+    it('should not throw if options.precedence "or"', () => {
+      assert.doesNotThrow(() => {
+        const filter = Filter.where(Clause.literal(42).eq().literal(42));
+        filter.prioritize([], { precedence: 'or' });
+      }, TypeError);
+    });
+
+    it('should throw if priority item not string', () => {
+      assert.throws(() => {
+        const filter = Filter.where(Clause.literal(42).eq().literal(42));
+        filter.prioritize([42]);
+      }, TypeError);
+    });
+
+    it('should throw if priority empy string', () => {
+      assert.throws(() => {
+        const filter = Filter.where(Clause.literal(42).eq().literal(42));
+        filter.prioritize(['']);
+      }, TypeError);
+    });
+
+    it('should not throw with pre-built PrioritizeStrategy', () => {
+      const filter = Filter.where(Clause.literal(42).eq().literal(42));
+      const strategy = PrioritizeStrategy.create(['/foo', '/bar']);
+
+      assert.doesNotThrow(() => {
+        filter.prioritize(strategy);
+      }, TypeError);
+    });
+
+    it('should throw if arg 0 PrioritizeStrategy, and arg length > 1', () => {
+      const filter = Filter.where(Clause.literal(42).eq().literal(42));
+      const strategy = PrioritizeStrategy.create(['/foo', '/bar']);
+
+      assert.throws(() => {
+        filter.prioritize(strategy, {});
+      }, TypeError);
+    });
+
+    /*
+      Note: the shorthand used in these test descriptions is a reference to a
+      target as it is indexed in a given list of priorities.
+
+      A -1 denotes a target not found in priorities.
+
+      An NA denotes no target.
+    */
+
+    const priorities = [
+      '/foo',
+      '/bar',
+      '/baz',
+      '/qux',
+      '/quux',
+      '/quuz',
+    ];
+
+    it('sorts anded [1 and 0] to [0 and 1]', () => {
+      const filter = parse('/bar eq 1 and /foo eq 0').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 and 1] to [0 and 1]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 and 0-2] to [0-2 and 1]', () => {
+      const filter = parse('/bar eq 1 and /foo eq /baz').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq /baz and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0-2 and 1] to [0-2 and 1]', () => {
+      const filter = parse('/foo eq /baz and /bar eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq /baz and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 and 2-0] to [2-0 and 1]', () => {
+      const filter = parse('/bar eq 1 and /baz eq /foo').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/baz eq /foo and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [2-0 and 1] to [2-0 and 1]', () => {
+      const filter = parse('/baz eq /foo and /bar eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/baz eq /foo and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 and -1-0] to [-1-0 and 1]', () => {
+      const filter = parse('/bar eq 1 and /corge eq /foo').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/corge eq /foo and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [-1-0 and 1] to [-1-0 and 1]', () => {
+      const filter = parse('/corge eq /foo and /bar eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/corge eq /foo and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 or 0] to [0 or 1]', () => {
+      const filter = parse('/bar eq 1 or /foo eq 0').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 or 1] to [0 or 1]', () => {
+      const filter = parse('/foo eq 0 or /bar eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [-1 and 0 and 1] to [0 and 1 and -1]', () => {
+      const filter = parse('/corge eq -1 and /foo eq 0 and /bar eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 and 1 and -1] to [0 and 1 and -1]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1 and /corge eq -1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [NA and 0 and 1] to [0 and 1 and NA]', () => {
+      const filter = parse('1 eq 1 and /foo eq 0 and /bar eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 and 1 and NA] to [0 and 1 and NA]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1 and 1 eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 or 2 and 0] to [0 and 2 or 1]', () => {
+      const filter = parse('/bar eq 1 or /baz eq 2 and /foo eq 0').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /baz eq 2 or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 and 2 or 1] to [0 and 2 or 1]', () => {
+      const filter = parse('/foo eq 0 and /baz eq 2 or /bar eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /baz eq 2 or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [3 and 1 or 2 and 0] to [0 and 2 or 1 and 3]', () => {
+      const filter = parse('/qux eq 3 and /bar eq 1 or /baz eq 2 and /foo eq 0').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /baz eq 2 or /bar eq 1 and /qux eq 3').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 and 2 or 1 and 3] to [0 and 2 or 1 and 3]', () => {
+      const filter = parse('/foo eq 0 and /baz eq 2 or /bar eq 1 and /qux eq 3').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /baz eq 2 or /bar eq 1 and /qux eq 3').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [3 or 1 and 2 or 0] to [0 or 1 and 2 or 3]', () => {
+      const filter = parse('/qux eq 3 or /bar eq 1 and /baz eq 2 or /foo eq 0').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 or /bar eq 1 and /baz eq 2 or /qux eq 3').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 or 1 and 2 or 3] to [0 or 1 and 2 or 3]', () => {
+      const filter = parse('/foo eq 0 or /bar eq 1 and /baz eq 2 or /qux eq 3').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 or /bar eq 1 and /baz eq 2 or /qux eq 3').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 and 3 or -1 and 0] to [0 and -1 or 1 and 3]', () => {
+      const filter = parse('/bar eq 1 and /qux eq 3 or /corge eq -1 and /foo eq 0').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /corge eq -1 or /bar eq 1 and /qux eq 3').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 and -1 or 1 and 3] to [0 and -1 or 1 and 3]', () => {
+      const filter = parse('/foo eq 0 and /corge eq -1 or /bar eq 1 and /qux eq 3').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /corge eq -1 or /bar eq 1 and /qux eq 3').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 and 3 or NA and 0] to [0 and NA or 1 and 3]', () => {
+      const filter = parse('/bar eq 1 and /qux eq 3 or 1 eq 1 and /foo eq 0').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and 1 eq 1 or /bar eq 1 and /qux eq 3').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 and NA or 1 and 3] to [0 and NA or 1 and 3]', () => {
+      const filter = parse('/foo eq 0 and 1 eq 1 or /bar eq 1 and /qux eq 3').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and 1 eq 1 or /bar eq 1 and /qux eq 3').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 or -1 and 3 or 0] to [0 or 1 or 3 and -1]', () => {
+      const filter = parse('/bar eq 1 or /corge eq -1 and /qux eq 3 or /foo eq 0').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 or /bar eq 1 or /qux eq 3 and /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 or 1 or 3 and -1] to [0 or 1 or 3 and -1]', () => {
+      const filter = parse('/foo eq 0 or /bar eq 1 or /qux eq 3 and /corge eq -1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 or /bar eq 1 or /qux eq 3 and /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 or NA and 3 or 0] to [0 or 1 or 3 and NA]', () => {
+      const filter = parse('/bar eq 1 or 1 eq 1 and /qux eq 3 or /foo eq 0').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 or /bar eq 1 or /qux eq 3 and 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 or 1 or 3 and NA] to [0 or 1 or 3 and NA]', () => {
+      const filter = parse('/foo eq 0 or /bar eq 1 or /qux eq 3 and 1 eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 or /bar eq 1 or /qux eq 3 and 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 and NA and 0 and -1] to [0 and 1 and NA and -1]', () => {
+      const filter = parse('/bar eq 1 and 1 eq 1 and /foo eq 0 and /corge eq -1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and 1 eq 1 and /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 and 1 and NA and -1] to [0 and 1 and NA and -1]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1 and 1 eq 1 and /corge eq -1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and 1 eq 1 and /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [NA and 1 or 0 and -1] to [0 and -1 or 1 and NA]', () => {
+      const filter = parse('1 eq 1 and /bar eq 1 or /foo eq 0 and /corge eq -1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /corge eq -1 or /bar eq 1 and 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 and -1 or 1 and NA] to [0 and -1 or 1 and NA]', () => {
+      const filter = parse('/foo eq 0 and /corge eq -1 or /bar eq 1 and 1 eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /corge eq -1 or /bar eq 1 and 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [NA or 1 and 0 or -1] to [0 and 1 or NA or -1]', () => {
+      const filter = parse('1 eq 1 or /bar eq 1 and /foo eq 0 or /corge eq -1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 or 1 eq 1 or /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [0 and 1 or NA or -1] to [0 and 1 or NA or -1]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1 or 1 eq 1 or /corge eq -1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 or 1 eq 1 or /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 and (2 and 0)] to [(0 and 2) and 1]', () => {
+      const filter = parse('/bar eq 1 and (/baz eq 2 and /foo eq 0)').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('(/foo eq 0 and /baz eq 2) and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [(0 and 2) and 1] to [(0 and 2) and 1]', () => {
+      const filter = parse('(/foo eq 0 and /baz eq 2) and /bar eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('(/foo eq 0 and /baz eq 2) and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 or (2 or 0)] to [(0 or 2) or 1]', () => {
+      const filter = parse('/bar eq 1 or (/baz eq 2 or /foo eq 0)').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('(/foo eq 0 or /baz eq 2) or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [(0 or 2) or 1] to [(0 or 2) or 1]', () => {
+      const filter = parse('(/foo eq 0 or /baz eq 2) or /bar eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('(/foo eq 0 or /baz eq 2) or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 and (2 or 0)] to [(0 or 2) and 1]', () => {
+      const filter = parse('/bar eq 1 and (/baz eq 2 or /foo eq 0)').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('(/foo eq 0 or /baz eq 2) and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [(0 or 2) and 1] to [(0 or 2) and 1]', () => {
+      const filter = parse('(/foo eq 0 or /baz eq 2) and /bar eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('(/foo eq 0 or /baz eq 2) and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [1 or (2 and 0)] to [(0 and 2) or 1]', () => {
+      const filter = parse('/bar eq 1 or (/baz eq 2 and /foo eq 0)').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('(/foo eq 0 and /baz eq 2) or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [(0 and 2) or 1] to [(0 and 2) or 1]', () => {
+      const filter = parse('(/foo eq 0 and /baz eq 2) or /bar eq 1').value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse('(/foo eq 0 and /baz eq 2) or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [5 and (1 or 4) and (3 and 0 or 2)] to [(0 and 3 or 2) and (1 or 4) and 5]', () => {
+      const a = '/quuz eq 5 and (/bar eq 1 or /quux eq 4) and (/qux eq 3 and /foo eq 0 or /baz eq 2)';
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities).filter;
+      const b = '(/foo eq 0 and /qux eq 3 or /baz eq 2) and (/bar eq 1 or /quux eq 4) and /quuz eq 5';
+      const expected = parse(b).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [(0 and 3 or 3) and (1 or 4) and 5] to [(0 and 3 or 3) and (1 or 4) and 5]', () => {
+      const a = '(/foo eq 0 and /qux eq 3 or /baz eq 2) and (/bar eq 1 or /quux eq 4) and /quuz eq 5';
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse(a).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [5 and (-1 or 4) and (3 and 0 or NA)] to [(0 and 3 or NA) and (4 or -1) and 5]', () => {
+      const a = '/quuz eq 5 and (/corge eq -1 or /quux eq 4) and (/qux eq 3 and /foo eq 0 or 1 eq 1)';
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities).filter;
+      const b = '(/foo eq 0 and /qux eq 3 or 1 eq 1) and (/quux eq 4 or /corge eq -1) and /quuz eq 5';
+      const expected = parse(b).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [(0 and 3 or NA) and (4 or -1) and 5] to [(0 and 3 or NA) and (4 or -1) and 5]', () => {
+      const a = '(/foo eq 0 and /qux eq 3 or 1 eq 1) and (/quux eq 4 or /corge eq -1) and /quuz eq 5';
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse(a).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [(3 or 1) or (5 or (NA and 0 or 4) and 2) and -1] '
+        + 'to [((0 and NA or 4) and 2 or 5) and -1 or (1 or 3)]', () => {
+      const a = `(/qux eq 3 or /bar eq 1)
+                 or (/quuz eq 5 or (1 eq 1 and /foo eq 0 or /quux eq 4) and /baz eq 2)
+                 and /corge eq -1`;
+
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities).filter;
+
+      const b = `((/foo eq 0 and 1 eq 1 or /quux eq 4) and /baz eq 2 or /quuz eq 5)
+                 and /corge eq -1
+                 or (/bar eq 1 or /qux eq 3)`;
+
+      const expected = parse(b).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [((0 and NA or 4) and 2 or 5) and -1 or (1 or 3)] '
+        + 'to [((0 and NA or 4) and 2 or 5) and -1 or (1 or 3)]', () => {
+      const a = `((/foo eq 0 and 1 eq 1 or /quux eq 4) and /baz eq 2 or /quuz eq 5)
+                 and /corge eq -1
+                 or (/bar eq 1 or /qux eq 3)`;
+
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse(a).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [(3 or -1-1) or (5 or (NA and 0-1 or 4) and 2) and -1] '
+        + 'to [((0-1 and NA or 4) and 2 or 5) and -1 or (-1-1 or 3)]', () => {
+      const a = `(/qux eq 3 or /corge eq /bar)
+                 or (/quuz eq 5 or (1 eq 1 and /foo eq /bar or /quux eq 4) and /baz eq 2)
+                 and /corge eq -1`;
+
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities).filter;
+
+      const b = `((/foo eq /bar and 1 eq 1 or /quux eq 4) and /baz eq 2 or /quuz eq 5)
+                 and /corge eq -1
+                 or (/corge eq /bar or /qux eq 3)`;
+
+      const expected = parse(b).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts anded [(3 or -1-1) or (5 or (NA and 0-1 or 4) and 2) and -1] '
+        + 'to [((0-1 and NA or 4) and 2 or 5) and -1 or (-1-1 or 3)]', () => {
+      const a = `((/foo eq /bar and 1 eq 1 or /quux eq 4) and /baz eq 2 or /quuz eq 5)
+                 and /corge eq -1
+                 or (/corge eq /bar or /qux eq 3)`;
+
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities).filter;
+      const expected = parse(a).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 and 0] to [0 and 1]', () => {
+      const filter = parse('/bar eq 1 and /foo eq 0').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 and 1] to [0 and 1]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 and 0-2] to [0-2 and 1]', () => {
+      const filter = parse('/bar eq 1 and /foo eq /baz').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq /baz and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0-2 and 1] to [0-2 and 1]', () => {
+      const filter = parse('/foo eq /baz and /bar eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq /baz and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 and 2-0] to [2-0 and 1]', () => {
+      const filter = parse('/bar eq 1 and /baz eq /foo').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/baz eq /foo and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [2-0 and 1] to [2-0 and 1]', () => {
+      const filter = parse('/baz eq /foo and /bar eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/baz eq /foo and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 and -1-0] to [-1-0 and 1]', () => {
+      const filter = parse('/bar eq 1 and /corge eq /foo').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/corge eq /foo and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [-1-0 and 1] to [-1-0 and 1]', () => {
+      const filter = parse('/corge eq /foo and /bar eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/corge eq /foo and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 or 0] to [0 or 1]', () => {
+      const filter = parse('/bar eq 1 or /foo eq 0').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 or 1] to [0 or 1]', () => {
+      const filter = parse('/foo eq 0 or /bar eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [-1 and 0 and 1] to [0 and 1 and -1]', () => {
+      const filter = parse('/corge eq -1 and /foo eq 0 and /bar eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 and 1 and -1] to [0 and 1 and -1]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1 and /corge eq -1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [NA and 0 and 1] to [0 and 1 and NA]', () => {
+      const filter = parse('1 eq 1 and /foo eq 0 and /bar eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 and 1 and NA] to [0 and 1 and NA]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1 and 1 eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 or 2 and 0] to [0 and 1 or 2]', () => {
+      const filter = parse('/bar eq 1 or /baz eq 2 and /foo eq 0').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 or /baz eq 2').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 and 1 or 2] to [0 and 1 or 2]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1 or /baz eq 2').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 or /baz eq 2').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [3 and 1 or 2 and 0] to [0 and 1 or 2 and 3]', () => {
+      const filter = parse('/qux eq 3 and /bar eq 1 or /baz eq 2 and /foo eq 0').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 or /baz eq 2 and /qux eq 3').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 and 1 or 2 and 3] to [0 and 1 or 2 and 3]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1 or /baz eq 2 and /qux eq 3').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 or /baz eq 2 and /qux eq 3').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [3 or 1 and 2 or 0] to [0 or 2 and 1 or 3]', () => {
+      const filter = parse('/qux eq 3 or /bar eq 1 and /baz eq 2 or /foo eq 0').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 or /baz eq 2 and /bar eq 1 or /qux eq 3').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 or 2 and 1 or 3] to [0 or 2 and 1 or 3]', () => {
+      const filter = parse('/foo eq 0 or /baz eq 2 and /bar eq 1 or /qux eq 3').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 or /baz eq 2 and /bar eq 1 or /qux eq 3').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 and 3 or -1 and 0] to [0 and 1 and 3 or -1]', () => {
+      const filter = parse('/bar eq 1 and /qux eq 3 or /corge eq -1 and /foo eq 0').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and /qux eq 3 or /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 and 1 and 3 or -1] to [0 and 1 and 3 or -1]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1 and /qux eq 3 or /corge eq -1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and /qux eq 3 or /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 and 3 or NA and 0] to [0 and 1 and 3 or NA]', () => {
+      const filter = parse('/bar eq 1 and /qux eq 3 or 1 eq 1 and /foo eq 0').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and /qux eq 3 or 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 and 1 and 3 or NA] to [0 and 1 and 3 or NA]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1 and /qux eq 3 or 1 eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and /qux eq 3 or 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 or -1 and 3 or 0] to [0 or 3 and 1 or -1]', () => {
+      const filter = parse('/bar eq 1 or /corge eq -1 and /qux eq 3 or /foo eq 0').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 or /qux eq 3 and /bar eq 1 or /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 or 3 and 1 or -1] to [0 or 3 and 1 or -1]', () => {
+      const filter = parse('/foo eq 0 or /qux eq 3 and /bar eq 1 or /corge eq -1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 or /qux eq 3 and /bar eq 1 or /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 or NA and 3 or 0] to [0 or 3 and 1 or NA]', () => {
+      const filter = parse('/bar eq 1 or 1 eq 1 and /qux eq 3 or /foo eq 0').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 or /qux eq 3 and /bar eq 1 or 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 or 3 and 1 or NA] to [0 or 3 and 1 or NA]', () => {
+      const filter = parse('/foo eq 0 or /qux eq 3 and /bar eq 1 or 1 eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 or /qux eq 3 and /bar eq 1 or 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 and NA and 0 and -1] to [0 and 1 and NA and -1]', () => {
+      const filter = parse('/bar eq 1 and 1 eq 1 and /foo eq 0 and /corge eq -1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and 1 eq 1 and /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 and 1 and NA and -1] to [0 and 1 and NA and -1]', () => {
+      const filter = parse('/foo eq 0 and /bar eq 1 and 1 eq 1 and /corge eq -1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 and /bar eq 1 and 1 eq 1 and /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [NA and 1 or 0 and -1] to [0 or 1 and NA and -1]', () => {
+      const filter = parse('1 eq 1 and /bar eq 1 or /foo eq 0 and /corge eq -1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 or /bar eq 1 and 1 eq 1 and /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 or 1 and NA and -1] to [0 or 1 and NA and -1]', () => {
+      const filter = parse('/foo eq 0 or /bar eq 1 and 1 eq 1 and /corge eq -1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 or /bar eq 1 and 1 eq 1 and /corge eq -1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [NA or 1 and 0 or -1] to [0 or -1 and 1 or NA]', () => {
+      const filter = parse('1 eq 1 or /bar eq 1 and /foo eq 0 or /corge eq -1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 or /corge eq -1 and /bar eq 1 or 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [0 or -1 and 1 or NA] to [0 or -1 and 1 or NA]', () => {
+      const filter = parse('/foo eq 0 or /corge eq -1 and /bar eq 1 or 1 eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('/foo eq 0 or /corge eq -1 and /bar eq 1 or 1 eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 and (2 and 0)] to [(0 and 2) and 1]', () => {
+      const filter = parse('/bar eq 1 and (/baz eq 2 and /foo eq 0)').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('(/foo eq 0 and /baz eq 2) and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [(0 and 2) and 1] to [(0 and 2) and 1]', () => {
+      const filter = parse('(/foo eq 0 and /baz eq 2) and /bar eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('(/foo eq 0 and /baz eq 2) and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 or (2 or 0)] to [(0 or 2) or 1]', () => {
+      const filter = parse('/bar eq 1 or (/baz eq 2 or /foo eq 0)').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('(/foo eq 0 or /baz eq 2) or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [(0 or 2) or 1] to [(0 or 2) or 1]', () => {
+      const filter = parse('(/foo eq 0 or /baz eq 2) or /bar eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('(/foo eq 0 or /baz eq 2) or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 and (2 or 0)] to [(0 or 2) and 1]', () => {
+      const filter = parse('/bar eq 1 and (/baz eq 2 or /foo eq 0)').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('(/foo eq 0 or /baz eq 2) and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [(0 or 2) and 1] to [(0 or 2) and 1]', () => {
+      const filter = parse('(/foo eq 0 or /baz eq 2) and /bar eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('(/foo eq 0 or /baz eq 2) and /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [1 or (2 and 0)] to [(0 and 2) or 1]', () => {
+      const filter = parse('/bar eq 1 or (/baz eq 2 and /foo eq 0)').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('(/foo eq 0 and /baz eq 2) or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [(0 and 2) or 1] to [(0 and 2) or 1]', () => {
+      const filter = parse('(/foo eq 0 and /baz eq 2) or /bar eq 1').value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse('(/foo eq 0 and /baz eq 2) or /bar eq 1').value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [5 and (1 or 4) and (3 and 0 or 2)] to [(0 or 2 and 3) and (1 or 4) and 5]', () => {
+      const a = '/quuz eq 5 and (/bar eq 1 or /quux eq 4) and (/qux eq 3 and /foo eq 0 or /baz eq 2)';
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const b = '(/foo eq 0 or /baz eq 2 and /qux eq 3) and (/bar eq 1 or /quux eq 4) and /quuz eq 5';
+      const expected = parse(b).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [(0 or 2 and 3) and (1 or 4) and 5] to [(0 or 2 and 3) and (1 or 4) and 5]', () => {
+      const a = '(/foo eq 0 or /baz eq 2 and /qux eq 3) and (/bar eq 1 or /quux eq 4) and /quuz eq 5';
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse(a).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [5 and (-1 or 4) and (3 and 0 or NA)] to [(0 or NA and 3) and (4 or -1) and 5]', () => {
+      const a = '/quuz eq 5 and (/corge eq -1 or /quux eq 4) and (/qux eq 3 and /foo eq 0 or 1 eq 1)';
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const b = '(/foo eq 0 or 1 eq 1 and /qux eq 3) and (/quux eq 4 or /corge eq -1) and /quuz eq 5';
+      const expected = parse(b).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [(0 or NA and 3) and (4 or -1) and 5] to [(0 or NA and 3) and (4 or -1) and 5]', () => {
+      const a = '(/foo eq 0 or 1 eq 1 and /qux eq 3) and (/quux eq 4 or /corge eq -1) and /quuz eq 5';
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse(a).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [(3 or 1) or (5 or (NA and 0 or 4) and 2) and -1] '
+        + 'to [((0 or 4 and NA) or 5 and 2) or (1 or 3) and -1]', () => {
+      const a = `(/qux eq 3 or /bar eq 1)
+                 or (/quuz eq 5 or (1 eq 1 and /foo eq 0 or /quux eq 4) and /baz eq 2)
+                 and /corge eq -1`;
+
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+
+      const b = `((/foo eq 0 or /quux eq 4 and 1 eq 1) or /quuz eq 5 and /baz eq 2)
+                 or (/bar eq 1 or /qux eq 3)
+                 and /corge eq -1`;
+
+      const expected = parse(b).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [((0 or 4 and NA) or 5 and 2) or (1 or 3) and -1] '
+        + 'to [((0 or 4 and NA) or 5 and 2) or (1 or 3) and -1]', () => {
+      const a = `((/foo eq 0 or /quux eq 4 and 1 eq 1) or /quuz eq 5 and /baz eq 2)
+                 or (/bar eq 1 or /qux eq 3)
+                 and /corge eq -1`;
+
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse(a).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [(3 or -1-1) or (5 or (NA and 0-1 or 4) and 2) and -1] '
+        + 'to [((0-1 or 4 and NA) or 5 and 2) or (-1-1 or 3) and -1]', () => {
+      const a = `(/qux eq 3 or /corge eq /bar)
+                 or (/quuz eq 5 or (1 eq 1 and /foo eq /bar or /quux eq 4) and /baz eq 2)
+                 and /corge eq -1`;
+
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+
+      const b = `((/foo eq /bar or /quux eq 4 and 1 eq 1) or /quuz eq 5 and /baz eq 2)
+                 or (/corge eq /bar or /qux eq 3)
+                 and /corge eq -1`;
+
+      const expected = parse(b).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('sorts ored [((0-1 or 4 and NA) or 5 and 2) or (-1-1 or 3) and -1] '
+        + 'to [((0-1 or 4 and NA) or 5 and 2) or (-1-1 or 3) and -1]', () => {
+      const a = `((/foo eq /bar or /quux eq 4 and 1 eq 1) or /quuz eq 5 and /baz eq 2)
+                 or (/corge eq /bar or /qux eq 3)
+                 and /corge eq -1`;
+
+      const filter = parse(a).value;
+      const result = filter.prioritize(priorities, { precedence: 'or' }).filter;
+      const expected = parse(a).value;
+      assert.isTrue(filtersEqual(expected, result));
+    });
+
+    it('should set root of nested filters to new filter', () => {
+      const filter = parse('/bar eq 1 and (/baz eq 2 or /foo eq 0)').value;
+      const result = filter.prioritize(priorities).filter;
+      assert.strictEqual(result.statements[0].value.root, result);
+    });
+
+    it('should set root of doubly nested filters to new filter', () => {
+      const filter = parse('/bar eq 1 and ((/baz eq 2 or /foo eq 0) and 1 eq 1)').value;
+      const result = filter.prioritize(priorities).filter;
+      assert.strictEqual(
+        result.statements[0].value.statements[0].value.root,
+        result
+      );
     });
   });
 

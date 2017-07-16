@@ -1,8 +1,10 @@
 # spleen
 
-[![Build Status](https://secure.travis-ci.org/dsfields/spleen-node.svg)](https://travis-ci.org/dsfields/spleen-node) [![Coverage Status](https://coveralls.io/repos/github/dsfields/spleen-node/badge.svg?branch=master)](https://coveralls.io/github/dsfields/spleen-node?branch=master) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/225e499d664e4a3fa4e1fd7129ebbafd)](https://www.codacy.com/app/dsfields/spleen-node?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=dsfields/spleen-node&amp;utm_campaign=Badge_Grade)
+[![Build Status](https://secure.travis-ci.org/dsfields/spleen-node.svg)](https://travis-ci.org/dsfields/spleen-node) [![Coverage Status](https://coveralls.io/repos/github/dsfields/spleen-node/badge.svg?branch=master)](https://coveralls.io/github/dsfields/spleen-node?branch=master) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/225e499d664e4a3fa4e1fd7129ebbafd)](https://www.codacy.com/app/dsfields/spleen-node?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=dsfields/spleen-node&amp;utm_campaign=Badge_Grade) [![NSP Status](https://nodesecurity.io/orgs/dsfields/projects/23bbc1f8-ce1c-47d3-a01c-5d6198c9f619/badge)](https://nodesecurity.io/orgs/dsfields/projects/23bbc1f8-ce1c-47d3-a01c-5d6198c9f619) [![Known Vulnerabilities](https://snyk.io/test/github/dsfields/spleen-node/badge.svg)](https://snyk.io/test/github/dsfields/spleen-node)
 
-Representing filter expressions across application layers is a pretty common problem.  Say we have a REST endpoint that accepts a filter, which is then deserialized, passed to your domain logic for processing, and then passed into your data access layer for querying information.  There are a couple of issues that come out of this scenario.  How is the filter expression formatted when it's passed in via an HTTP request?  How do we pass this expression to our domain logic and data access layers without leaking implementation details?  The `spleen` module seeks to solve these issues.
+Easily add dynamic filtering to your application.
+
+Say we have a REST endpoint to a collection, and we need to provide a way for users to specify filter criteria when querying this collection.  This is a fairly common problem, and there are a couple of challenges that come out of this scenario.  How is the filter expression formatted when it's passed in via an HTTP request?  How do we pass this expression to our domain logic and data access layers without leaking implementation details?  The `spleen` module seeks to solve these challenges.
 
 __Contents__
 
@@ -40,7 +42,7 @@ const expression = '/foo eq "bar" and /baz gt 42';
 const filter = spleen.parse(expression);
 ```
 
-Or define filter graphs directly (which is more efficient from a runtime perspective):
+Or define filter graphs directly (which is more efficient from a runtime performance perspective):
 
 ```js
 const spleen = require('spleen');
@@ -326,7 +328,19 @@ The primary interface exposes all of the classes needed to build `spleen` filter
 
     + `spleen.Like`: gets a reference to the [`Like`](#class-like) class.
 
-    + `spleen.parse(value)` parses a string into a parse result object. This method takes a single string argument which represents the filter.  If the filter is invalid, the return object's success property will be false and the error property will contain the error message. If the filter is valid, the return object's success property will be set to true and the value property will be set to an instance of `Filter`.  
+    + `spleen.parse(value)` parses a string, and converts it into an instance of [`Filter`](#class-filter).
+    
+      _Parameters_
+
+      - `value`: a string representing a `spleen` expression.
+
+      This method returns an object with the following keys:
+
+      - `error`: if `value` was in invalid `spleen` expression, this key will be an instance of `ParserError` with additional information about why the failure occured.
+
+      - `filter`: if parsing was successful, this key is an instance of `Filter`.
+
+      - `success`: a Boolean value indicating whether or not parsing was successful.
 
     + `spleen.Range`: gets a reference to the [`Range`](#class-range) class.
 
@@ -522,6 +536,31 @@ Represents the graph structure of a `spleen` filter.
 
       This method returns the `Filter` instance.
 
+    + `Filter.prototype.prioritize(priorities [, options] | strategy)`: creates a shallow copy of the `Filter` instance, and reorders all statements to align with a given list of field targets that is ordered by priority.
+
+      Reordered statements cannot always be made to be in perfect prioritization order.  This method will always compute a `Filter` instance that is logically the same as the original.  For example...
+
+      - Given the expression `/bar eq 2 or /baz eq 3 and /foo eq 1`
+      - A priority list of `['/foo', '/bar', '/baz']`
+      - And a conjuction precedence of `and` (the default)
+      - The result will be `/foo eq 1 and /baz eq 3 or /bar eq 2`
+
+      _Parameters_
+
+      - `priorities`: _(required)_ an array of field targets in RFC 6901 format.  The array should be in priority order, from most important (index 0) to least important.
+      
+      - `options`: _(optional)_ an object with the following keys:
+
+        - `precedence`: _(optional)_ a string that can be either `and` or `or` (case insensitve).  This dictates how an expression should be evaluated, and, consequently, how statements within a `Filter` can be reoranized.
+
+      ...or...
+
+      - `strategy`: _(required)_ an instance of [`PrioritizeStrategy`](#class-prioritizestrategy).
+
+      This method returns an object with the following fields:
+
+      - `filter`: the new `Filter` instance.
+
     + `Filter.prototype.toString(urlEncode)`: returns a `spleen` filter expression.
 
       _Parameters_
@@ -547,6 +586,22 @@ Represents a "like" string matching expression.  This clause is used as the "obj
       - `value`: a string value to match.
     
     This method returns a Boolean.
+
+#### Class: `PrioritizeStrategy`
+
+A cache of computed information used to prioritize statements in a `Filter` instance.
+
+  * __Methods__
+
+    + `PrioritizeStrategy.create(priorities [, options])`: builds a `PrioritizeStrategy`.
+
+      _Parameters_
+
+      - `priorities`: _(required)_ an array of field targets in RFC 6901 format.  The array should be in priority order, from most important (index 0) to least important.
+        
+      - `options`: _(optional)_ an object with the following keys:
+
+        - `precedence`: _(optional)_ a string that can be either `and` or `or` (case insensitve).  This dictates how an expression should be evaluated, and, consequently, how statements within a `Filter` can be reoranized.
 
 #### Class: `Range`
 
@@ -596,23 +651,23 @@ In the case of a data access layer, this typically means converting a `Filter` i
 
 ## Motivation
 
-Representing complex filter expressions is a fairly common problem for API developers.  There are a variety of methods commonly used by teams, and they all have their pros and cons...
+Representing dynamic complex filter expressions is a fairly common problem for API developers.  There are a variety of methods commonly used by teams, and they all have their pros and cons...
 
 * Use the query string to pass in filter criteria.<br />
   __Pros:__ Very easy to implement. Universally understood.<br />
-  __Cons:__ Query strings have no native way of specifying comparison operators.  This makes it difficult to make your APIs idiomatic.
+  __Cons:__ Query strings have no native way of specifying comparison operators.  Difficult to make APIs idiomatic.
 
-* Expose the underlying query language used by your database.  Drawbacks:<br />
+* Expose the underlying query language used by your database.<br />
   __Pros:__ Can provide a lot of power.  Little to no effort to implement.<br />
-  __Cons:__ It leaks internal implementation details.  It's difficult to secure.
+  __Cons:__ Leaks internal implementation details.  Difficult to secure.
 
 * Build a custom filter dialect and parser.<br />
   __Pros:__ Greater control over the software.<br />
-  __Cons:__ Teams often make these tools domain-specific.  They are complex and time-consuming to build.  Closed-source solutions do not benefit from a larger community of people and companies testing and contributing to the project.
+  __Cons:__ Teams often make these tools domain-specific.  Complex and time-consuming to build.  Closed-source solutions do not benefit from a larger community of people and companies testing and contributing to the project.
 
 * Use frameworks for querying languages such as GraphQL and OData.<br />
   __Pros:__ Very robust.  Support for full ad-hoc querying.<br />
-  __Cons:__ Represents a broader system design.  May not be practical for use in existing systems built on intent-based design (like REST).  Built around opinionated frameworks that can be complicated to implement.
+  __Cons:__ Represents a broader system design.  May not be practical for use in existing systems built on an intent-based design (like REST).  Built around opinionated frameworks that can be complicated to implement.  Limited ability to optimize ad-hoc queries at runtime, and fully take advantage of database indexes.  Poorly designed user-specified queries can be used as a vector for DoS attacks.
 
 The `spleen` module addresses these challenges wtih the following goals in minds:
 
@@ -620,10 +675,14 @@ The `spleen` module addresses these challenges wtih the following goals in minds
 
 * Can be implemented with minimal effort.
 
-* Supports complex filters with support for a variety of comparison operators, functions, and conjunctions.
+* Enables complex filter logic with support for a variety of comparison operators, functions, and conjunctions.
 
-* Provides an abstraction around the issue of filtering data.
+* Provides an abstraction around the issue of dynamically filtering data.
 
 * Domain agnostic.
 
 * Allows API endpoints to utilize a single query parameter for filtering.  This makes your APIs more idiomatic, and your code simpler.
+
+* Ability to prioritize user-defined filter clauses.  This allows implementers to generate efficient, index-aware queries.
+
+* Provide plugins that help make database query commands secure.
