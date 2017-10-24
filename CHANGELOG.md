@@ -9,7 +9,7 @@ __New Features__
 * Adding `Like.prototype.toRegexString()`.
 
 __Bug Fixes__
-* Encountering the escape a charater threw a parser error if it preceeded a character that is not one of `spleen`'s special characters.  This fix will ensure that the escape character is ignored if it's escaping an un-escapeable character.
+* Encountering the escape a character threw a parser error if it preceded a character that is not one of `spleen`'s special characters.  This fix will ensure that the escape character is ignored if it's escaping an un-escapable character.
 
 ### 1.2.0
 
