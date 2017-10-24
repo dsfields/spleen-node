@@ -1,6 +1,6 @@
 # spleen
 
-[![Build Status](https://secure.travis-ci.org/dsfields/spleen-node.svg)](https://travis-ci.org/dsfields/spleen-node) [![Coverage Status](https://coveralls.io/repos/github/dsfields/spleen-node/badge.svg?branch=master)](https://coveralls.io/github/dsfields/spleen-node?branch=master) [![Code Climate](https://codeclimate.com/github/dsfields/spleen-node/badges/gpa.svg)](https://codeclimate.com/github/dsfields/spleen-node) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/225e499d664e4a3fa4e1fd7129ebbafd)](https://www.codacy.com/app/dsfields/spleen-node?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=dsfields/spleen-node&amp;utm_campaign=Badge_Grade) [![NSP Status](https://nodesecurity.io/orgs/dsfields/projects/23bbc1f8-ce1c-47d3-a01c-5d6198c9f619/badge)](https://nodesecurity.io/orgs/dsfields/projects/23bbc1f8-ce1c-47d3-a01c-5d6198c9f619) [![Known Vulnerabilities](https://snyk.io/test/github/dsfields/spleen-node/badge.svg)](https://snyk.io/test/github/dsfields/spleen-node)
+[![Build Status](https://secure.travis-ci.org/dsfields/spleen-node.svg)](https://travis-ci.org/dsfields/spleen-node) [![Coverage Status](https://coveralls.io/repos/github/dsfields/spleen-node/badge.svg?branch=master)](https://coveralls.io/github/dsfields/spleen-node?branch=master) [![Code Climate](https://codeclimate.com/github/dsfields/spleen-node/badges/gpa.svg)](https://codeclimate.com/github/dsfields/spleen-node) [![NSP Status](https://nodesecurity.io/orgs/dsfields/projects/23bbc1f8-ce1c-47d3-a01c-5d6198c9f619/badge)](https://nodesecurity.io/orgs/dsfields/projects/23bbc1f8-ce1c-47d3-a01c-5d6198c9f619) [![Known Vulnerabilities](https://snyk.io/test/github/dsfields/spleen-node/badge.svg)](https://snyk.io/test/github/dsfields/spleen-node)
 
 Easily add dynamic filtering to your application.
 
@@ -585,7 +585,11 @@ Represents a "like" string matching expression.  This clause is used as the "obj
 
       - `value`: a string value to match.
     
-    This method returns a Boolean.
+      This method returns a Boolean.
+
+    + `Like.prototype.toRegex()`: converts the Like pattern to a compatible regular expression.  This method returns in an instance of [`RegExp`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp).
+
+    + `Like.prototype.toRegexString()`: converts the Like pattern to a compatible regular expression string.  This method returns a string.
 
 #### Class: `PrioritizeStrategy`
 
