@@ -5869,6 +5869,116 @@ describe('Tokenizer', () => {
         tokenizer.next();
       }, errors.ParserError);
     });
+
+    it('should escape \\ in strings', () => {
+      const tokenizer = new Tokenizer('/foo like "Hello\\\\World"');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.string);
+      assert.strictEqual(tokenizer.current.value, 'Hello\\World');
+    });
+
+    it('should escape " in strings', () => {
+      const tokenizer = new Tokenizer('/foo like "\\"Hello\\" World"');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.string);
+      assert.strictEqual(tokenizer.current.value, '"Hello" World');
+    });
+
+    it('should escape / in strings', () => {
+      const tokenizer = new Tokenizer('/foo like "Hello\\/World"');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.string);
+      assert.strictEqual(tokenizer.current.value, 'Hello/World');
+    });
+
+    it('should escape ( in string', () => {
+      const tokenizer = new Tokenizer('/foo like "\\(Hello World"');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.string);
+      assert.strictEqual(tokenizer.current.value, '(Hello World');
+    });
+
+    it('should escape ) in string', () => {
+      const tokenizer = new Tokenizer('/foo like "Hello\\) World"');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.string);
+      assert.strictEqual(tokenizer.current.value, 'Hello) World');
+    });
+
+    it('should escape [ in string', () => {
+      const tokenizer = new Tokenizer('/foo like "\\[Hello World"');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.string);
+      assert.strictEqual(tokenizer.current.value, '[Hello World');
+    });
+
+    it('should escape ] in string', () => {
+      const tokenizer = new Tokenizer('/foo like "Hello\\] World"');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.string);
+      assert.strictEqual(tokenizer.current.value, 'Hello] World');
+    });
+
+    it('should escape { in string', () => {
+      const tokenizer = new Tokenizer('/foo like "\\{Hello World"');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.string);
+      assert.strictEqual(tokenizer.current.value, '{Hello World');
+    });
+
+    it('should escape } in string', () => {
+      const tokenizer = new Tokenizer('/foo like "Hello\\} World"');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.string);
+      assert.strictEqual(tokenizer.current.value, 'Hello} World');
+    });
+
+    it('should escape , in string', () => {
+      const tokenizer = new Tokenizer('/foo like "Hello\\, World"');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.string);
+      assert.strictEqual(tokenizer.current.value, 'Hello, World');
+    });
+
+    it('should escape non-special chars in string', () => {
+      const tokenizer = new Tokenizer('/foo like "Hello, \\World"');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+      assert.strictEqual(tokenizer.current.type, Token.string);
+      assert.strictEqual(tokenizer.current.value, 'Hello, World');
+    });
+
+    it('should throw on trailing escape', () => {
+      const tokenizer = new Tokenizer('/foo eq 42 \\');
+      tokenizer.next();
+      tokenizer.next();
+      tokenizer.next();
+
+      assert.throws(() => {
+        tokenizer.next();
+      }, errors.ParserError);
+    });
   });
 
 });

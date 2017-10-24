@@ -585,7 +585,11 @@ Represents a "like" string matching expression.  This clause is used as the "obj
 
       - `value`: a string value to match.
     
-    This method returns a Boolean.
+      This method returns a Boolean.
+
+    + `Like.prototype.toRegex()`: converts the Like pattern to a compatible regular expression.  This method returns in an instance of [`RegExp`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp).
+
+    + `Like.prototype.toRegexString()`: converts the Like pattern to a compatible regular expression string.  This method returns a string.
 
 #### Class: `PrioritizeStrategy`
 

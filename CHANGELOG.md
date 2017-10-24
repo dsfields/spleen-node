@@ -2,6 +2,15 @@
 
 ## 1.0
 
+### 1.3.0
+
+__New Features__
+* Adding `Like.prototype.toRegex()`.
+* Adding `Like.prototype.toRegexString()`.
+
+__Bug Fixes__
+* Encountering the escape a charater threw a parser error if it preceeded a character that is not one of `spleen`'s special characters.  This fix will ensure that the escape character is ignored if it's escaping an un-escapeable character.
+
 ### 1.2.0
 
 __New Features__

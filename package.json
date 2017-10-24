@@ -2,7 +2,7 @@
   "name": "spleen",
   "longName": "spleen",
   "description": "Dynamic filter expression parsing, formatting, and abstractions for web APIs.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "dependencies": {
     "elv": "^1.0.0"
   },
@@ -26,7 +26,8 @@
     "search",
     "api",
     "input",
-    "param"
+    "param",
+    "predicates"
   ],
   "license": "MIT",
   "main": "./lib",
