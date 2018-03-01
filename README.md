@@ -338,7 +338,7 @@ The primary interface exposes all of the classes needed to build `spleen` filter
 
       - `error`: if `value` was in invalid `spleen` expression, this key will be an instance of `ParserError` with additional information about why the failure occured.
 
-      - `filter`: if parsing was successful, this key is an instance of `Filter`.
+      - `value`: if parsing was successful, this key is an instance of `Filter`.
 
       - `success`: a Boolean value indicating whether or not parsing was successful.
 
