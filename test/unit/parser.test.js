@@ -1346,6 +1346,18 @@ describe('Parser', () => {
       const filter = parser.parse().value;
       assert.isTrue(filter.match(src));
     });
+
+    it('should match true on isRegex', () => {
+      const parser = new Parser('/corge like "[a-z]{1}"');
+      const filter = parser.parse().value;
+      assert.isTrue(filter.match(src, true));
+    });
+
+    it('should match false on isRegex', () => {
+      const parser = new Parser('/foo like "\\w"');
+      const filter = parser.parse().value;
+      assert.isFalse(filter.match(src, true));
+    });
   });
 
 });

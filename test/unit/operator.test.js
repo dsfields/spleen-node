@@ -137,6 +137,18 @@ describe('Operator', () => {
       assert.isTrue(result);
     });
 
+    it('should be true on like match with regular expresion', () => {
+      const op = Operator.like;
+      const result = op.match('foo', new Like('foo'), true);
+      assert.isTrue(result);
+    });
+
+    it('should be false on like miss', () => {
+      const op = Operator.like;
+      const result = op.match('oof', new Like('\\w(foo)\\w'), true);
+      assert.isFalse(result);
+    });
+
     it('should be false on like miss', () => {
       const op = Operator.like;
       const result = op.match('oof', new Like('*foo*'));

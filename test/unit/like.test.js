@@ -93,6 +93,11 @@ describe('Like', () => {
       assert.isTrue(like.match('foo/bar'));
     });
 
+    it('should match with regular expresion', () => {
+      const like = new Like('^(foo).(bar)$');
+      assert.isTrue(like.match('foo/bar'), true);
+    });
+
     it('should !match n number of any char at start of string', () => {
       const like = new Like('*foo');
       assert.isFalse(like.match('fooasdf'));
@@ -173,6 +178,11 @@ describe('Like', () => {
       assert.isFalse(like.match('fodobar'));
     });
 
+    it('should !match with regular expresion', () => {
+      const like = new Like('^(foo).(bar)$');
+      assert.isFalse(like.match('fodobar', true));
+    });
+
     it('should escape * wildcard', () => {
       const like = new Like('foo\\*');
       assert.isTrue(like.match('foo*'));
@@ -196,6 +206,12 @@ describe('Like', () => {
       const like = new Like('*foo');
       const result = like.toRegex();
       assert.isTrue(result.test('asdf foo'));
+    });
+
+    it('should !match with regular expresion', () => {
+      const like = new Like('^(foo)');
+      const result = like.toRegex(true);
+      assert.isFalse(result.test('asdf foo'));
     });
 
     it('should match n number of any char mid string', () => {
@@ -280,6 +296,12 @@ describe('Like', () => {
       const like = new Like('*foo_bar*');
       const result = like.toRegex();
       assert.isTrue(result.test('asdf foo/bar ;lkj'));
+    });
+
+    it('should match with regular expresion', () => {
+      const like = new Like('(foo)?(bar)');
+      const result = like.toRegex(true);
+      assert.isTrue(result.test('asdf foo/bar lkj'));
     });
 
     it('should match 0 of any char at start and end and 1 mid string', () => {
@@ -382,6 +404,12 @@ describe('Like', () => {
       const like = new Like('*foo_bar*');
       const result = like.toRegex();
       assert.isFalse(result.test('fodobar'));
+    });
+
+    it('should !match with regular expresion', () => {
+      const like = new Like('\\w(foo)?(bar)');
+      const result = like.toRegex(true);
+      assert.isTrue(result.test('foofdgbar ;lkj'));
     });
 
     it('should escape * wildcard', () => {
